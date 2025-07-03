@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitor de QRCode e Código de Barras 4</title>
+    <title>Leitor de QRCode com Banco de Dados</title>
+    <!-- Biblioteca do Leitor de QRCode -->
     <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    
+    <!-- SDKs do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-database-compat.js"></script>
+
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #0056b3; text-align: center; }
@@ -37,7 +43,7 @@
 </head>
 <body>
 
-    <h1>Leitor de QRCode e Código de Barras 1</h1>
+    <h1>Leitor de QRCode com Banco de Dados</h1>
     
     <div id="reader-container">
         <div id="reader"></div>
@@ -49,8 +55,8 @@
         <button id="exportButton" class="btn btn-export">Exportar para CSV</button>
     </div>
 
-    <h2>Resultados</h2>
-    <p style="text-align:center; font-size: 0.8em;">Formato esperado no código: <strong>caixa,produto,numero_de_serie</strong></p>
+    <h2>Resultados Salvos</h2>
+    <p style="text-align:center; font-size: 0.8em;">Formato esperado: <strong>caixa,produto,numero_de_serie</strong></p>
     <table id="resultsTable">
         <thead>
             <tr>
@@ -61,11 +67,30 @@
             </tr>
         </thead>
         <tbody>
-            </tbody>
+            <!-- Os dados do Firebase serão inseridos aqui -->
+        </tbody>
     </table>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // PASSO 1: Configuração do Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
+          authDomain: "coletor-92990.firebaseapp.com",
+          databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com",
+          projectId: "coletor-92990",
+          storageBucket: "coletor-92990.firebasestorage.app",
+          messagingSenderId: "591970302569",
+          appId: "1:591970302569:web:edcf8e8c6f55729c9340f8",
+          measurementId: "G-QJQNMDCHW5"
+        };
+
+        // PASSO 2: Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const leiturasRef = database.ref('leituras');
+        
+        // --- Função principal da aplicação ---
+        function runApp() {
             const toggleScanButton = document.getElementById('toggleScanButton');
             const exportButton = document.getElementById('exportButton');
             const resultsTableBody = document.querySelector('#resultsTable tbody');
@@ -74,37 +99,20 @@
             let html5QrCode;
             let isScanning = false;
             
-            // Esta linha agora funcionará, pois a biblioteca foi carregada antes.
             html5QrCode = new Html5Qrcode("reader", { verbose: false });
 
+            // --- Lógica do Leitor de QR Code ---
             toggleScanButton.addEventListener('click', () => {
-                if (isScanning) {
-                    stopScanning();
-                } else {
-                    startScanning();
-                }
-            });
-
-            exportButton.addEventListener('click', () => {
-                exportToCsv('dados_escaneados.csv');
+                if (isScanning) { stopScanning(); } else { startScanning(); }
             });
 
             function startScanning() {
-                const config = {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 }
-                };
-                
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
                 statusDiv.textContent = "Iniciando câmera...";
                 toggleScanButton.disabled = true;
-
                 html5QrCode.start({ facingMode: "environment" }, config, 
-                    (decodedText, decodedResult) => {
-                        handleDecodedText(decodedText);
-                    },
-                    (errorMessage) => {
-                        // ignora erros de "not found", que são normais.
-                    }
+                    (decodedText) => handleDecodedText(decodedText),
+                    (errorMessage) => {}
                 ).then(() => {
                     isScanning = true;
                     toggleScanButton.textContent = "Parar Leitura";
@@ -113,7 +121,7 @@
                     toggleScanButton.disabled = false;
                 }).catch(err => {
                     statusDiv.textContent = `Erro ao iniciar câmera.`;
-                    alert(`ERRO: ${err}. Verifique se a permissão da câmera foi concedida.`);
+                    alert(`ERRO: ${err}. Verifique a permissão da câmera.`);
                     toggleScanButton.disabled = false;
                 });
             }
@@ -127,7 +135,7 @@
                     toggleScanButton.textContent = "Iniciar Leitura";
                     toggleScanButton.classList.remove('btn-stop');
                     statusDiv.textContent = "Leitura parada.";
-                    document.getElementById('reader').innerHTML = ""; // Limpa a visualização da câmera
+                    document.getElementById('reader').innerHTML = "";
                     toggleScanButton.disabled = false;
                 }).catch(err => {
                     statusDiv.textContent = "Erro ao parar a câmera.";
@@ -137,48 +145,81 @@
 
             function handleDecodedText(text) {
                 if (scannedCodes.has(text)) {
-                    statusDiv.textContent = "Código já lido!";
+                    statusDiv.textContent = "Código já lido nesta sessão!";
                     setTimeout(() => { if(isScanning) statusDiv.textContent = "Aponte a câmera para o código."; }, 2000);
                     return;
                 }
                 scannedCodes.add(text);
-                statusDiv.textContent = `Código detectado!`;
+                statusDiv.textContent = `Código detectado! Salvando...`;
+                
                 const parts = text.split(',');
-                if (parts.length === 3) {
-                    addResultToTable(...parts.map(p => p.trim()));
-                } else {
-                    addResultToTable('Formato Inválido', text, '');
-                }
-            }
+                let dataToSave;
 
-            function addResultToTable(caixa, produto, numeroSerie) {
-                const newRow = resultsTableBody.insertRow(0); // Insere no topo para ver os mais recentes primeiro
-                newRow.insertCell(0).textContent = caixa;
-                newRow.insertCell(1).textContent = produto;
-                newRow.insertCell(2).textContent = numeroSerie;
+                if (parts.length === 3) {
+                    dataToSave = {
+                        caixa: parts[0].trim(),
+                        produto: parts[1].trim(),
+                        numeroSerie: parts[2].trim(),
+                        ativada: 'Não',
+                        timestamp: new Date().toISOString()
+                    };
+                } else {
+                    dataToSave = {
+                        caixa: 'Formato Inválido',
+                        produto: text,
+                        numeroSerie: '',
+                        ativada: 'Não',
+                        timestamp: new Date().toISOString()
+                    };
+                }
+                
+                leiturasRef.push(dataToSave);
+            }
+            
+            // --- Lógica do Banco de Dados ---
+            leiturasRef.on('value', (snapshot) => {
+                resultsTableBody.innerHTML = '';
+                const data = snapshot.val();
+                if (data) {
+                    statusDiv.textContent = "Dados carregados.";
+                    Object.keys(data).forEach(key => {
+                        addResultToTable(key, data[key]);
+                    });
+                } else {
+                    statusDiv.textContent = "Nenhum dado salvo ainda.";
+                }
+            });
+
+            function addResultToTable(key, data) {
+                const newRow = resultsTableBody.insertRow(0);
+                newRow.setAttribute('data-key', key);
+                
+                newRow.insertCell(0).textContent = data.caixa;
+                newRow.insertCell(1).textContent = data.produto;
+                newRow.insertCell(2).textContent = data.numeroSerie;
+                
                 const ativadaCell = newRow.insertCell(3);
                 const ativadaButton = document.createElement('button');
-                ativadaButton.textContent = 'Não';
-                ativadaButton.className = 'btn-ativada nao';
-                ativadaButton.onclick = () => toggleAtivada(ativadaButton);
+                ativadaButton.textContent = data.ativada;
+                ativadaButton.className = data.ativada === 'Sim' ? 'btn-ativada sim' : 'btn-ativada nao';
+                ativadaButton.onclick = () => toggleAtivada(key, data.ativada);
                 ativadaCell.appendChild(ativadaButton);
             }
 
-            function toggleAtivada(button) {
-                if (button.textContent === 'Não') {
-                    button.textContent = 'Sim';
-                    button.classList.replace('nao', 'sim');
-                } else {
-                    button.textContent = 'Não';
-                    button.classList.replace('sim', 'nao');
-                }
+            function toggleAtivada(key, currentValue) {
+                const newValue = currentValue === 'Sim' ? 'Não' : 'Sim';
+                database.ref('leituras/' + key).update({ ativada: newValue });
             }
+
+            // --- Lógica da Exportação ---
+            exportButton.addEventListener('click', () => {
+                exportToCsv('dados_escaneados.csv');
+            });
 
             function exportToCsv(filename) {
                 const headers = ['Caixa', 'Produto', 'Numero de Serie', 'Ativada'];
                 const data = Array.from(document.querySelectorAll('#resultsTable tbody tr')).map(row => {
                     const cells = row.querySelectorAll('td');
-                    // Garante que o conteúdo seja encapsulado em aspas para evitar problemas com vírgulas
                     return [
                         `"${cells[0].textContent}"`,
                         `"${cells[1].textContent}"`,
@@ -186,7 +227,6 @@
                         `"${cells[3].querySelector('button').textContent}"`
                     ];
                 });
-                // Inverte a ordem dos dados para que o CSV siga a mesma ordem da tabela (mais novo primeiro)
                 let csvContent = headers.join(',') + '\n' + data.reverse().map(e => e.join(',')).join('\n');
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
@@ -198,7 +238,21 @@
                 link.click();
                 document.body.removeChild(link);
             }
-        });
+        }
+
+        // CORREÇÃO: Função que espera as bibliotecas carregarem antes de rodar o app.
+        function initializeWhenReady() {
+            if (typeof Html5Qrcode !== 'undefined' && typeof firebase !== 'undefined' && firebase.database) {
+                // Bibliotecas prontas, executa a aplicação.
+                runApp();
+            } else {
+                // Se não estiverem prontas, espera 100ms e tenta de novo.
+                setTimeout(initializeWhenReady, 100);
+            }
+        }
+
+        // Inicia o processo de verificação.
+        initializeWhenReady();
     </script>
 </body>
 </html>
