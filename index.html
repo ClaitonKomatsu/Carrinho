@@ -15,7 +15,8 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #0056b3; text-align: center; }
         #reader-container { max-width: 500px; margin: 20px auto; }
-        #reader { border: 2px solid #ccc; border-radius: 8px; min-height: 250px; background-color: #000; }
+        #reader { border: 2px solid #ccc; border-radius: 8px; min-height: 250px; background-color: #000; transition: border-color 0.3s; }
+        #reader.scan-success { border-color: #28a745; }
         #status { text-align: center; font-size: 1.1em; color: #0056b3; font-weight: bold; height: 40px; margin-top: 10px; display: flex; align-items: center; justify-content: center;}
         .button-container { text-align: center; margin: 20px 0; }
         .btn {
@@ -128,6 +129,7 @@
             const exportButton = document.getElementById('exportButton');
             const resultsTableBody = document.querySelector('#resultsTable tbody');
             const statusDiv = document.getElementById('status');
+            const readerDiv = document.getElementById('reader');
             
             // Elementos da área de coleta
             const stagingArea = document.getElementById('staging-area');
@@ -139,6 +141,7 @@
             // Variáveis de estado
             let html5QrCode;
             let isScanning = false;
+            let scanDebounce = false; // Flag para evitar leituras múltiplas
             let currentScanStep = ''; // 'caixa', 'produto', 'serie'
             let currentData = {};
 
@@ -178,11 +181,25 @@
 
             function startScanning() {
                 if (isScanning) return;
-                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                // MELHORIA: Configuração otimizada para melhor performance
+                const config = { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 150 },
+                    supportedScanTypes: [
+                        Html5QrcodeScanType.SCAN_TYPE_CAMERA
+                    ],
+                    formatsToSupport: [ 
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.CODE_128
+                    ]
+                };
                 
-                html5QrCode.start({ facingMode: "environment" }, config, 
+                html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    config, 
                     (decodedText) => handleDecodedText(decodedText),
-                    (errorMessage) => {}
+                    (errorMessage) => {} // Ignora erros de "código não encontrado"
                 ).then(() => {
                     isScanning = true;
                     startNewScanButton.disabled = true;
@@ -203,28 +220,35 @@
             }
 
             function handleDecodedText(decodedText) {
-                if (!isScanning) return;
+                if (!isScanning || scanDebounce) return;
 
-                switch (currentScanStep) {
-                    case 'caixa':
-                        currentData.caixa = decodedText;
-                        stagingCaixa.textContent = decodedText;
-                        currentScanStep = 'produto';
-                        break;
-                    case 'produto':
-                        currentData.produto = decodedText;
-                        stagingProduto.textContent = decodedText;
-                        currentScanStep = 'serie';
-                        break;
-                    case 'serie':
-                        currentData.numeroSerie = decodedText;
-                        stagingSerie.textContent = decodedText;
-                        currentScanStep = 'pronto';
-                        stopScanning();
-                        saveButton.disabled = false;
-                        break;
-                }
-                updateStatusMessage();
+                scanDebounce = true; // Ativa a trava para evitar novas leituras
+                readerDiv.classList.add('scan-success'); // Feedback visual
+
+                setTimeout(() => {
+                    switch (currentScanStep) {
+                        case 'caixa':
+                            currentData.caixa = decodedText;
+                            stagingCaixa.textContent = decodedText;
+                            currentScanStep = 'produto';
+                            break;
+                        case 'produto':
+                            currentData.produto = decodedText;
+                            stagingProduto.textContent = decodedText;
+                            currentScanStep = 'serie';
+                            break;
+                        case 'serie':
+                            currentData.numeroSerie = decodedText;
+                            stagingSerie.textContent = decodedText;
+                            currentScanStep = 'pronto';
+                            stopScanning();
+                            saveButton.disabled = false;
+                            break;
+                    }
+                    updateStatusMessage();
+                    readerDiv.classList.remove('scan-success'); // Remove o feedback visual
+                    scanDebounce = false; // Libera a trava para a próxima leitura
+                }, 500); // Pausa de 500ms
             }
 
             function updateStatusMessage() {
@@ -264,14 +288,19 @@
                 resultsTableBody.innerHTML = '';
                 const data = snapshot.val();
                 if (data) {
-                    Object.keys(data).forEach(key => {
+                    // Ordena as chaves para mostrar os mais recentes primeiro
+                    const sortedKeys = Object.keys(data).sort((a, b) => {
+                        return new Date(data[b].timestamp) - new Date(data[a].timestamp);
+                    });
+
+                    sortedKeys.forEach(key => {
                         addResultToTable(key, data[key]);
                     });
                 }
             });
 
             function addResultToTable(key, data) {
-                const newRow = resultsTableBody.insertRow(0);
+                const newRow = resultsTableBody.insertRow(); // Insere no final para manter a ordem
                 newRow.setAttribute('data-key', key);
                 
                 newRow.insertCell(0).textContent = data.caixa;
@@ -279,7 +308,17 @@
                 newRow.insertCell(2).textContent = data.numeroSerie;
                 
                 const ativadaCell = newRow.insertCell(3);
-                ativadaCell.textContent = data.ativada;
+                // MELHORIA: Botão interativo na tabela principal
+                const ativadaButton = document.createElement('button');
+                ativadaButton.textContent = data.ativada;
+                ativadaButton.className = data.ativada === 'Sim' ? 'btn-ativada sim' : 'btn-ativada nao';
+                ativadaButton.onclick = () => toggleAtivadaInTable(key, data.ativada);
+                ativadaCell.appendChild(ativadaButton);
+            }
+            
+            function toggleAtivadaInTable(key, currentValue) {
+                const newValue = currentValue === 'Sim' ? 'Não' : 'Sim';
+                database.ref('leituras/' + key).update({ ativada: newValue });
             }
 
             // --- Lógica da Exportação ---
@@ -290,7 +329,6 @@
             function exportToCsv(filename) {
                 const headers = ['Caixa', 'Produto', 'Numero de Serie', 'Ativada'];
                 const data = [];
-                // Pega os dados direto do Firebase para garantir consistência
                 leiturasRef.once('value', (snapshot) => {
                     const leituras = snapshot.val();
                     if (leituras) {
@@ -320,15 +358,12 @@
             }
         }
 
-        // Função que espera as bibliotecas carregarem antes de rodar o app.
         function initializeWhenReady() {
             let attempts = 0;
-            const maxAttempts = 50; // Tenta por 5 segundos no máximo (50 * 100ms)
-
+            const maxAttempts = 50;
             const intervalId = setInterval(() => {
                 const qrCodeReady = typeof Html5Qrcode !== 'undefined';
                 const firebaseReady = typeof firebase !== 'undefined' && firebase.database;
-
                 if (qrCodeReady && firebaseReady) {
                     clearInterval(intervalId);
                     runApp();
