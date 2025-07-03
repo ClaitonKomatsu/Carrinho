@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitor de QRCode com Banco de Dados</title>
-    <!-- CORREÇÃO: Alterado o CDN para uma fonte mais robusta (cdnjs) -->
+    <title>Coletor de Dados com Leitor de QRCode</title>
+    <!-- Biblioteca do Leitor de QRCode -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     
     <!-- SDKs do Firebase -->
@@ -12,11 +12,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-database-compat.js"></script>
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #0056b3; text-align: center; }
         #reader-container { max-width: 500px; margin: 20px auto; }
-        #reader { border: 2px solid #ccc; border-radius: 8px; min-height: 250px; }
-        #status { text-align: center; font-size: 0.9em; color: #c82333; font-weight: bold; height: 40px; margin-top: 10px; display: flex; align-items: center; justify-content: center;}
+        #reader { border: 2px solid #ccc; border-radius: 8px; min-height: 250px; background-color: #000; }
+        #status { text-align: center; font-size: 1.1em; color: #0056b3; font-weight: bold; height: 40px; margin-top: 10px; display: flex; align-items: center; justify-content: center;}
         .button-container { text-align: center; margin: 20px 0; }
         .btn {
             background-color: #007bff; color: white; border: none; padding: 12px 20px;
@@ -39,24 +39,57 @@
         }
         .sim { background-color: #28a745; border-color: #218838; }
         .nao { background-color: #dc3545; border-color: #c82333; }
+        
+        /* Estilos para a área de coleta */
+        #staging-area {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 15px;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+        .staging-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .staging-item:last-child { border-bottom: none; }
+        .staging-item span { font-weight: bold; }
+        .staging-item .data { color: #555; }
     </style>
 </head>
 <body>
 
-    <h1>Leitor de QRCode com Banco de Dados</h1>
+    <h1>Coletor de Dados</h1>
     
     <div id="reader-container">
         <div id="reader"></div>
-        <div id="status">Carregando aplicação...</div>
+        <div id="status">Clique em "Nova Leitura" para começar</div>
     </div>
 
     <div class="button-container">
-        <button id="toggleScanButton" class="btn">Iniciar Leitura</button>
-        <button id="exportButton" class="btn btn-export">Exportar para CSV</button>
+        <button id="startNewScanButton" class="btn">Nova Leitura</button>
     </div>
 
+    <!-- Área de Coleta em Etapas -->
+    <div id="staging-area" style="display: none;">
+        <div class="staging-item"><span>Caixa:</span> <span id="staging-caixa" class="data">Aguardando...</span></div>
+        <div class="staging-item"><span>Produto:</span> <span id="staging-produto" class="data">Aguardando...</span></div>
+        <div class="staging-item"><span>Nº Série:</span> <span id="staging-serie" class="data">Aguardando...</span></div>
+        <div class="staging-item"><span>Ativada:</span> <button id="staging-ativada" class="btn-ativada nao">Não</button></div>
+        <div class="button-container">
+            <button id="saveButton" class="btn btn-export" disabled>Salvar Leitura</button>
+        </div>
+    </div>
+
+
     <h2>Resultados Salvos</h2>
-    <p style="text-align:center; font-size: 0.8em;">Formato esperado: <strong>caixa,produto,numero_de_serie</strong></p>
+    <div class="button-container">
+        <button id="exportButton" class="btn btn-export">Exportar para CSV</button>
+    </div>
     <table id="resultsTable">
         <thead>
             <tr>
@@ -89,113 +122,144 @@
         const database = firebase.database();
         const leiturasRef = database.ref('leituras');
         
-        // --- Função principal da aplicação ---
         function runApp() {
-            const toggleScanButton = document.getElementById('toggleScanButton');
+            const startNewScanButton = document.getElementById('startNewScanButton');
+            const saveButton = document.getElementById('saveButton');
             const exportButton = document.getElementById('exportButton');
             const resultsTableBody = document.querySelector('#resultsTable tbody');
             const statusDiv = document.getElementById('status');
-            const scannedCodes = new Set();
+            
+            // Elementos da área de coleta
+            const stagingArea = document.getElementById('staging-area');
+            const stagingCaixa = document.getElementById('staging-caixa');
+            const stagingProduto = document.getElementById('staging-produto');
+            const stagingSerie = document.getElementById('staging-serie');
+            const stagingAtivada = document.getElementById('staging-ativada');
+
+            // Variáveis de estado
             let html5QrCode;
             let isScanning = false;
-            
-            statusDiv.textContent = "Pronto para iniciar a leitura.";
-            
-            try {
-                html5QrCode = new Html5Qrcode("reader", { verbose: false });
-            } catch (e) {
-                statusDiv.textContent = "Erro ao inicializar o leitor de QRCode.";
-                console.error("Erro no construtor do Html5Qrcode:", e);
-                alert("Erro fatal ao inicializar o leitor de QRCode. Verifique o console para detalhes.");
-                return;
-            }
+            let currentScanStep = ''; // 'caixa', 'produto', 'serie'
+            let currentData = {};
 
-            // --- Lógica do Leitor de QR Code ---
-            toggleScanButton.addEventListener('click', () => {
-                if (isScanning) { stopScanning(); } else { startScanning(); }
+            html5QrCode = new Html5Qrcode("reader", { verbose: false });
+
+            // --- Lógica Principal ---
+
+            startNewScanButton.addEventListener('click', () => {
+                resetStagingArea();
+                stagingArea.style.display = 'block';
+                currentScanStep = 'caixa';
+                updateStatusMessage();
+                startScanning();
+            });
+
+            saveButton.addEventListener('click', () => {
+                currentData.ativada = stagingAtivada.textContent;
+                currentData.timestamp = new Date().toISOString();
+                
+                leiturasRef.push(currentData).then(() => {
+                    statusDiv.textContent = 'Leitura salva com sucesso!';
+                    resetStagingArea();
+                }).catch(err => {
+                    statusDiv.textContent = `Erro ao salvar: ${err.message}`;
+                });
+            });
+
+            stagingAtivada.addEventListener('click', () => {
+                if (stagingAtivada.textContent === 'Não') {
+                    stagingAtivada.textContent = 'Sim';
+                    stagingAtivada.classList.replace('nao', 'sim');
+                } else {
+                    stagingAtivada.textContent = 'Não';
+                    stagingAtivada.classList.replace('sim', 'nao');
+                }
             });
 
             function startScanning() {
+                if (isScanning) return;
                 const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                statusDiv.textContent = "Solicitando permissão da câmera...";
-                toggleScanButton.disabled = true;
                 
                 html5QrCode.start({ facingMode: "environment" }, config, 
                     (decodedText) => handleDecodedText(decodedText),
                     (errorMessage) => {}
                 ).then(() => {
                     isScanning = true;
-                    toggleScanButton.textContent = "Parar Leitura";
-                    toggleScanButton.classList.add('btn-stop');
-                    statusDiv.textContent = "Aponte a câmera para o código.";
-                    toggleScanButton.disabled = false;
+                    startNewScanButton.disabled = true;
                 }).catch(err => {
-                    console.error("Falha ao iniciar a câmera:", err);
-                    let errorMessage = `Erro ao iniciar: ${err.name || err}.`;
-                    if (err.name === "NotAllowedError") {
-                        errorMessage = "Permissão para a câmera foi negada. Verifique as configurações do seu navegador.";
-                    } else if (err.name === "NotFoundError") {
-                        errorMessage = "Nenhuma câmera foi encontrada no dispositivo.";
-                    } else if (err.name === "NotReadableError") {
-                        errorMessage = "A câmera já está em uso por outro aplicativo ou houve um erro de hardware.";
-                    }
-                    statusDiv.textContent = errorMessage;
-                    alert(errorMessage);
-                    toggleScanButton.disabled = false;
+                    statusDiv.textContent = `Erro ao iniciar câmera: ${err.name}`;
                 });
             }
 
             function stopScanning() {
                 if (!isScanning) return;
-                statusDiv.textContent = "Parando a câmera...";
-                toggleScanButton.disabled = true;
                 html5QrCode.stop().then(() => {
                     isScanning = false;
-                    toggleScanButton.textContent = "Iniciar Leitura";
-                    toggleScanButton.classList.remove('btn-stop');
-                    statusDiv.textContent = "Leitura parada.";
+                    startNewScanButton.disabled = false;
                     document.getElementById('reader').innerHTML = "";
-                    toggleScanButton.disabled = false;
                 }).catch(err => {
-                    statusDiv.textContent = "Erro ao parar a câmera.";
-                    toggleScanButton.disabled = false;
+                    console.error("Falha ao parar a câmera.", err);
                 });
             }
 
-            function handleDecodedText(text) {
-                if (scannedCodes.has(text)) {
-                    statusDiv.textContent = "Código já lido nesta sessão!";
-                    setTimeout(() => { if(isScanning) statusDiv.textContent = "Aponte a câmera para o código."; }, 2000);
-                    return;
-                }
-                scannedCodes.add(text);
-                statusDiv.textContent = `Código detectado! Salvando...`;
-                
-                const parts = text.split(',');
-                let dataToSave;
+            function handleDecodedText(decodedText) {
+                if (!isScanning) return;
 
-                if (parts.length === 3) {
-                    dataToSave = {
-                        caixa: parts[0].trim(),
-                        produto: parts[1].trim(),
-                        numeroSerie: parts[2].trim(),
-                        ativada: 'Não',
-                        timestamp: new Date().toISOString()
-                    };
-                } else {
-                    dataToSave = {
-                        caixa: 'Formato Inválido',
-                        produto: text,
-                        numeroSerie: '',
-                        ativada: 'Não',
-                        timestamp: new Date().toISOString()
-                    };
+                switch (currentScanStep) {
+                    case 'caixa':
+                        currentData.caixa = decodedText;
+                        stagingCaixa.textContent = decodedText;
+                        currentScanStep = 'produto';
+                        break;
+                    case 'produto':
+                        currentData.produto = decodedText;
+                        stagingProduto.textContent = decodedText;
+                        currentScanStep = 'serie';
+                        break;
+                    case 'serie':
+                        currentData.numeroSerie = decodedText;
+                        stagingSerie.textContent = decodedText;
+                        currentScanStep = 'pronto';
+                        stopScanning();
+                        saveButton.disabled = false;
+                        break;
                 }
-                
-                leiturasRef.push(dataToSave);
+                updateStatusMessage();
             }
-            
-            // --- Lógica do Banco de Dados ---
+
+            function updateStatusMessage() {
+                switch (currentScanStep) {
+                    case 'caixa':
+                        statusDiv.textContent = 'Aponte para o código da CAIXA';
+                        break;
+                    case 'produto':
+                        statusDiv.textContent = 'Aponte para o código do PRODUTO';
+                        break;
+                    case 'serie':
+                        statusDiv.textContent = 'Aponte para o NÚMERO DE SÉRIE';
+                        break;
+                    case 'pronto':
+                        statusDiv.textContent = 'Leitura concluída. Clique em SALVAR.';
+                        break;
+                    default:
+                        statusDiv.textContent = 'Clique em "Nova Leitura" para começar';
+                }
+            }
+
+            function resetStagingArea() {
+                stagingArea.style.display = 'none';
+                stagingCaixa.textContent = 'Aguardando...';
+                stagingProduto.textContent = 'Aguardando...';
+                stagingSerie.textContent = 'Aguardando...';
+                stagingAtivada.textContent = 'Não';
+                stagingAtivada.className = 'btn-ativada nao';
+                saveButton.disabled = true;
+                currentData = {};
+                currentScanStep = '';
+                updateStatusMessage();
+            }
+
+            // --- Lógica do Banco de Dados (Carregar Tabela) ---
             leiturasRef.on('value', (snapshot) => {
                 resultsTableBody.innerHTML = '';
                 const data = snapshot.val();
@@ -203,8 +267,6 @@
                     Object.keys(data).forEach(key => {
                         addResultToTable(key, data[key]);
                     });
-                } else {
-                    if (!isScanning) statusDiv.textContent = "Nenhum dado salvo ainda.";
                 }
             });
 
@@ -217,48 +279,48 @@
                 newRow.insertCell(2).textContent = data.numeroSerie;
                 
                 const ativadaCell = newRow.insertCell(3);
-                const ativadaButton = document.createElement('button');
-                ativadaButton.textContent = data.ativada;
-                ativadaButton.className = data.ativada === 'Sim' ? 'btn-ativada sim' : 'btn-ativada nao';
-                ativadaButton.onclick = () => toggleAtivada(key, data.ativada);
-                ativadaCell.appendChild(ativadaButton);
-            }
-
-            function toggleAtivada(key, currentValue) {
-                const newValue = currentValue === 'Sim' ? 'Não' : 'Sim';
-                database.ref('leituras/' + key).update({ ativada: newValue });
+                ativadaCell.textContent = data.ativada;
             }
 
             // --- Lógica da Exportação ---
             exportButton.addEventListener('click', () => {
-                exportToCsv('dados_escaneados.csv');
+                exportToCsv('dados_coletados.csv');
             });
 
             function exportToCsv(filename) {
                 const headers = ['Caixa', 'Produto', 'Numero de Serie', 'Ativada'];
-                const data = Array.from(document.querySelectorAll('#resultsTable tbody tr')).map(row => {
-                    const cells = row.querySelectorAll('td');
-                    return [
-                        `"${cells[0].textContent}"`,
-                        `"${cells[1].textContent}"`,
-                        `"${cells[2].textContent}"`,
-                        `"${cells[3].querySelector('button').textContent}"`
-                    ];
+                const data = [];
+                // Pega os dados direto do Firebase para garantir consistência
+                leiturasRef.once('value', (snapshot) => {
+                    const leituras = snapshot.val();
+                    if (leituras) {
+                        for (const key in leituras) {
+                            const item = leituras[key];
+                            data.push([
+                                `"${item.caixa}"`,
+                                `"${item.produto}"`,
+                                `"${item.numeroSerie}"`,
+                                `"${item.ativada}"`
+                            ]);
+                        }
+                        let csvContent = headers.join(',') + '\n' + data.join('\n');
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement("a");
+                        const url = URL.createObjectURL(blob);
+                        link.setAttribute("href", url);
+                        link.setAttribute("download", filename);
+                        link.style.visibility = 'hidden';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        alert("Não há dados para exportar.");
+                    }
                 });
-                let csvContent = headers.join(',') + '\n' + data.reverse().map(e => e.join(',')).join('\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", filename);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
             }
         }
 
-        // Função de diagnóstico que espera as bibliotecas carregarem.
+        // Função que espera as bibliotecas carregarem antes de rodar o app.
         function initializeWhenReady() {
             let attempts = 0;
             const maxAttempts = 50; // Tenta por 5 segundos no máximo (50 * 100ms)
@@ -267,29 +329,19 @@
                 const qrCodeReady = typeof Html5Qrcode !== 'undefined';
                 const firebaseReady = typeof firebase !== 'undefined' && firebase.database;
 
-                console.log(`Tentativa ${attempts + 1}: Html5Qrcode=${qrCodeReady}, Firebase=${firebaseReady}`);
-
                 if (qrCodeReady && firebaseReady) {
                     clearInterval(intervalId);
-                    console.log("Bibliotecas prontas! Executando a aplicação.");
                     runApp();
                 } else {
                     attempts++;
                     if (attempts >= maxAttempts) {
                         clearInterval(intervalId);
-                        const statusDiv = document.getElementById('status');
-                        let errorMsg = "Erro: Falha ao carregar as bibliotecas necessárias. ";
-                        if (!qrCodeReady) errorMsg += "A biblioteca do leitor de QR Code não carregou. ";
-                        if (!firebaseReady) errorMsg += "A biblioteca do Firebase não carregou.";
-                        console.error(errorMsg);
-                        statusDiv.textContent = errorMsg;
-                        alert(errorMsg);
+                        document.getElementById('status').textContent = "Erro: Falha ao carregar bibliotecas externas.";
                     }
                 }
             }, 100);
         }
 
-        // Inicia o processo de verificação.
         initializeWhenReady();
     </script>
 </body>
