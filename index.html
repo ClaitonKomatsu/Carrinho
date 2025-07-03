@@ -74,6 +74,7 @@
             let html5QrCode;
             let isScanning = false;
             
+            // Esta linha agora funcionará, pois a biblioteca foi carregada antes.
             html5QrCode = new Html5Qrcode("reader", { verbose: false });
 
             toggleScanButton.addEventListener('click', () => {
