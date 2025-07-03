@@ -3,33 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste de Câmera</title>
+    <title>Leitor de QRCode e Código de Barras</title>
+    
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; font-size: 1.2rem; }
-        button { padding: 15px 25px; font-size: 1.2rem; cursor: pointer; }
-        #status { margin-top: 20px; font-weight: bold; }
-        video { margin-top: 20px; border: 2px solid black; max-width: 90%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        h1, h2 { color: #0056b3; text-align: center; }
+        #reader-container { max-width: 500px; margin: 20px auto; }
+        #reader { border: 2px solid #ccc; border-radius: 8px; }
+        #status { text-align: center; font-size: 0.9em; color: #666; height: 20px; margin-top: 10px;}
+        .button-container { text-align: center; margin: 20px 0; }
+        .btn {
+            background-color: #007bff; color: white; border: none; padding: 12px 20px;
+            font-size: 16px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s;
+        }
+        .btn:hover { background-color: #0056b3; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-stop { background-color: #dc3545; }
+        .btn-stop:hover { background-color: #c82333; }
+        .btn-export { background-color: #28a745; }
+        .btn-export:hover { background-color: #218838; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        thead { background-color: #007bff; color: white; }
+        th, td { border: 1px solid #ddd; text-align: left; padding: 12px; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .btn-ativada {
+            cursor: pointer; padding: 5px 10px; border-radius: 5px; border: 1px solid; color: white;
+            font-weight: bold; width: 60px; text-align: center;
+        }
+        .sim { background-color: #28a745; border-color: #218838; }
+        .nao { background-color: #dc3545; border-color: #c82333; }
     </style>
 </head>
 <body>
-    <button id="startButton">Testar Câmera</button>
-    <p id="status">Clique no botão para iniciar o teste.</p>
-    <video id="videoPlayer" playsinline autoplay></video>
+
+    <h1>Leitor de QRCode e Código de Barras</h1>
+    
+    <div id="reader-container">
+        <div id="reader"></div>
+        <div id="status">Aguardando início da leitura...</div>
+    </div>
+
+    <div class="button-container">
+        <button id="toggleScanButton" class="btn">Iniciar Leitura</button>
+        <button id="exportButton" class="btn btn-export">Exportar para CSV</button>
+    </div>
+
+    <h2>Resultados</h2>
+    <p style="text-align:center; font-size: 0.8em;">O dado lido deve estar no formato: <strong>caixa,produto,numero_de_serie</strong></p>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>Caixa</th>
+                <th>Produto</th>
+                <th>Número de Série</th>
+                <th>Ativada</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
 
     <script>
-        const startButton = document.getElementById('startButton');
-        const statusEl = document.getElementById('status');
-        const videoPlayer = document.getElementById('videoPlayer');
+        // O listener DOMContentLoaded garante que o HTML foi carregado antes de executar o script.
+        // Como a biblioteca agora está no <head>, ela estará definida quando este evento disparar.
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleScanButton = document.getElementById('toggleScanButton');
+            const exportButton = document.getElementById('exportButton');
+            const resultsTableBody = document.querySelector('#resultsTable tbody');
+            const statusDiv = document.getElementById('status');
+            const scannedCodes = new Set();
+            let html5QrCode;
+            let isScanning = false;
 
-        startButton.addEventListener('click', async () => {
-            statusEl.textContent = 'Solicitando permissão...';
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                statusEl.textContent = 'Permissão Concedida! Câmera Ativa.';
-                videoPlayer.srcObject = stream;
-            } catch (err) {
-                console.error("Erro no getUserMedia:", err);
-                statusEl.textContent = `ERRO: ${err.name} - ${err.message}`;
+            // Esta linha (105 no código antigo) agora funcionará, pois Html5Qrcode já foi definido.
+            html5QrCode = new Html5Qrcode("reader", { verbose: false });
+
+            toggleScanButton.addEventListener('click', () => {
+                if (isScanning) {
+                    stopScanning();
+                } else {
+                    startScanning();
+                }
+            });
+
+            exportButton.addEventListener('click', () => {
+                exportToCsv('dados_escaneados.csv');
+            });
+
+            function startScanning() {
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                };
+                
+                statusDiv.textContent = "Iniciando câmera...";
+                toggleScanButton.disabled = true;
+
+                html5QrCode.start({ facingMode: "environment" }, config, 
+                    (decodedText, decodedResult) => { // success callback
+                        handleDecodedText(decodedText);
+                    },
+                    (errorMessage) => { // error callback
+                        // ignora erros de "not found"
+                    }
+                ).then(() => {
+                    isScanning = true;
+                    toggleScanButton.textContent = "Parar Leitura";
+                    toggleScanButton.classList.add('btn-stop');
+                    statusDiv.textContent = "Aponte a câmera para o código.";
+                    toggleScanButton.disabled = false;
+                }).catch(err => {
+                    statusDiv.textContent = `Erro ao iniciar câmera.`;
+                    alert(`ERRO: ${err}. Verifique se o navegador tem permissão para acessar a câmera.`);
+                    toggleScanButton.disabled = false;
+                });
+            }
+
+            function stopScanning() {
+                if (!isScanning) return;
+                statusDiv.textContent = "Parando a câmera...";
+                toggleScanButton.disabled = true;
+                html5QrCode.stop().then(() => {
+                    isScanning = false;
+                    toggleScanButton.textContent = "Iniciar Leitura";
+                    toggleScanButton.classList.remove('btn-stop');
+                    statusDiv.textContent = "Leitura parada.";
+                    document.getElementById('reader').innerHTML = "";
+                    toggleScanButton.disabled = false;
+                }).catch(err => {
+                    statusDiv.textContent = "Erro ao parar a câmera.";
+                    toggleScanButton.disabled = false;
+                });
+            }
+
+            function handleDecodedText(text) {
+                if (scannedCodes.has(text)) {
+                    statusDiv.textContent = "Código já lido!";
+                    setTimeout(() => { if(isScanning) statusDiv.textContent = "Aponte a câmera para o código."; }, 2000);
+                    return;
+                }
+                scannedCodes.add(text);
+                statusDiv.textContent = `Código detectado!`;
+                const parts = text.split(',');
+                if (parts.length === 3) {
+                    addResultToTable(...parts.map(p => p.trim()));
+                } else {
+                    addResultToTable('Formato Inválido', text, '');
+                }
+            }
+
+            function addResultToTable(caixa, produto, numeroSerie) {
+                const newRow = resultsTableBody.insertRow(0);
+                newRow.insertCell(0).textContent = caixa;
+                newRow.insertCell(1).textContent = produto;
+                newRow.insertCell(2).textContent = numeroSerie;
+                const ativadaCell = newRow.insertCell(3);
+                const ativadaButton = document.createElement('button');
+                ativadaButton.textContent = 'Não';
+                ativadaButton.className = 'btn-ativada nao';
+                ativadaButton.onclick = () => toggleAtivada(ativadaButton);
+                ativadaCell.appendChild(ativadaButton);
+            }
+
+            function toggleAtivada(button) {
+                if (button.textContent === 'Não') {
+                    button.textContent = 'Sim';
+                    button.classList.replace('nao', 'sim');
+                } else {
+                    button.textContent = 'Não';
+                    button.classList.replace('sim', 'nao');
+                }
+            }
+
+            function exportToCsv(filename) {
+                const headers = ['Caixa', 'Produto', 'Numero_de_Serie', 'Ativada'];
+                const data = Array.from(document.querySelectorAll('#resultsTable tbody tr')).map(row => {
+                    const cells = row.querySelectorAll('td');
+                    return [
+                        `"${cells[0].textContent}"`,
+                        `"${cells[1].textContent}"`,
+                        `"${cells[2].textContent}"`,
+                        `"${cells[3].querySelector('button').textContent}"`
+                    ];
+                });
+                let csvContent = headers.join(',') + '\n' + data.map(e => e.join(',')).join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
         });
     </script>
