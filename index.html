@@ -48,6 +48,8 @@
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-stop { background-color: #dc3545; }
         .btn-stop:hover { background-color: #c82333; }
+        .btn-clear { background-color: #ffc107; color: black; }
+        .btn-clear:hover { background-color: #e0a800; }
         .btn-export { background-color: #28a745; }
         .btn-export:hover { background-color: #218838; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -102,6 +104,8 @@
         <div class="staging-item"><span>Nº Série:</span> <span id="staging-serie" class="data">Aguardando...</span></div>
         <div class="staging-item"><span>Ativada:</span> <button id="staging-ativada" class="btn-ativada nao">Não</button></div>
         <div class="button-container">
+            <!-- MELHORIA: Botão para limpar a última leitura -->
+            <button id="clearLastButton" class="btn btn-clear" disabled>Limpar Última</button>
             <button id="saveButton" class="btn btn-export" disabled>Salvar Leitura</button>
         </div>
     </div>
@@ -147,6 +151,7 @@
             const startNewScanButton = document.getElementById('startNewScanButton');
             const saveButton = document.getElementById('saveButton');
             const exportButton = document.getElementById('exportButton');
+            const clearLastButton = document.getElementById('clearLastButton');
             const resultsTableBody = document.querySelector('#resultsTable tbody');
             const statusDiv = document.getElementById('status');
             const readerDiv = document.getElementById('reader');
@@ -169,7 +174,6 @@
             // --- Lógica Principal ---
 
             startNewScanButton.addEventListener('click', () => {
-                console.log("Botão 'Nova Leitura' clicado.");
                 resetStagingArea();
                 stagingArea.style.display = 'block';
                 currentScanStep = 'caixa';
@@ -189,6 +193,29 @@
                 });
             });
 
+            clearLastButton.addEventListener('click', () => {
+                if (currentScanStep === 'pronto') {
+                    currentScanStep = 'serie';
+                    currentData.numeroSerie = undefined;
+                    stagingSerie.textContent = 'Aguardando...';
+                    saveButton.disabled = true;
+                } else if (currentScanStep === 'serie') {
+                    currentScanStep = 'produto';
+                    currentData.produto = undefined;
+                    stagingProduto.textContent = 'Aguardando...';
+                } else if (currentScanStep === 'produto') {
+                    currentScanStep = 'caixa';
+                    currentData.caixa = undefined;
+                    stagingCaixa.textContent = 'Aguardando...';
+                    clearLastButton.disabled = true;
+                }
+                
+                if (!isScanning) {
+                    startScanning();
+                }
+                updateStatusMessage();
+            });
+
             stagingAtivada.addEventListener('click', () => {
                 if (stagingAtivada.textContent === 'Não') {
                     stagingAtivada.textContent = 'Sim';
@@ -203,38 +230,32 @@
                 if (isScanning) return;
                 const config = { 
                     fps: 10, 
-                    qrbox: { width: 250, height: 150 },
+                    qrbox: { width: 280, height: 180 },
                     supportedScanTypes: [
                         Html5QrcodeScanType.SCAN_TYPE_CAMERA
                     ],
-                    formatsToSupport: [ 
-                        Html5QrcodeSupportedFormats.QR_CODE,
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.CODE_128
-                    ]
+                    // MELHORIA: Ativa o leitor nativo do browser para mais precisão
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
                 };
                 
-                // CORREÇÃO: Simplificação das restrições da câmara para máxima compatibilidade
                 const cameraConstraints = { 
                     facingMode: "environment"
                 };
                 
-                console.log("A tentar iniciar a câmara...");
                 html5QrCode.start(
                     cameraConstraints, 
                     config, 
                     (decodedText) => handleDecodedText(decodedText),
                     (errorMessage) => {}
                 ).then(() => {
-                    console.log("Câmara iniciada com sucesso.");
                     isScanning = true;
                     startNewScanButton.disabled = true;
                 }).catch(err => {
-                    // CORREÇÃO: Adicionado alert() para garantir que o erro seja visto pelo utilizador
                     const errorMessage = `Erro CRÍTICO ao iniciar câmara: ${err.name} - ${err.message}`;
-                    console.error(errorMessage, err);
                     statusDiv.textContent = errorMessage;
-                    alert(errorMessage); // Força a exibição do erro
+                    alert(errorMessage);
                 });
             }
 
@@ -262,6 +283,7 @@
                             currentData.caixa = decodedText;
                             stagingCaixa.textContent = decodedText;
                             currentScanStep = 'produto';
+                            clearLastButton.disabled = false;
                             break;
                         case 'produto':
                             currentData.produto = decodedText;
@@ -315,6 +337,7 @@
                 stagingAtivada.textContent = 'Não';
                 stagingAtivada.className = 'btn-ativada nao';
                 saveButton.disabled = true;
+                clearLastButton.disabled = true;
                 currentData = {};
                 currentScanStep = '';
                 updateStatusMessage();
