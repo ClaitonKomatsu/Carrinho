@@ -15,8 +15,8 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #0056b3; text-align: center; }
         #reader-container { max-width: 500px; margin: 20px auto; }
-        #reader { border: 2px solid #ccc; border-radius: 8px; }
-        #status { text-align: center; font-size: 0.9em; color: #666; height: 20px; margin-top: 10px;}
+        #reader { border: 2px solid #ccc; border-radius: 8px; min-height: 250px; }
+        #status { text-align: center; font-size: 0.9em; color: #c82333; font-weight: bold; height: 40px; margin-top: 10px; display: flex; align-items: center; justify-content: center;}
         .button-container { text-align: center; margin: 20px 0; }
         .btn {
             background-color: #007bff; color: white; border: none; padding: 12px 20px;
@@ -47,7 +47,7 @@
     
     <div id="reader-container">
         <div id="reader"></div>
-        <div id="status">Aguardando início da leitura...</div>
+        <div id="status">Aguardando bibliotecas...</div>
     </div>
 
     <div class="button-container">
@@ -99,6 +99,8 @@
             let html5QrCode;
             let isScanning = false;
             
+            statusDiv.textContent = "Pronto para iniciar a leitura.";
+            
             html5QrCode = new Html5Qrcode("reader", { verbose: false });
 
             // --- Lógica do Leitor de QR Code ---
@@ -108,8 +110,9 @@
 
             function startScanning() {
                 const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                statusDiv.textContent = "Iniciando câmera...";
+                statusDiv.textContent = "Solicitando permissão da câmera...";
                 toggleScanButton.disabled = true;
+                
                 html5QrCode.start({ facingMode: "environment" }, config, 
                     (decodedText) => handleDecodedText(decodedText),
                     (errorMessage) => {}
@@ -120,8 +123,21 @@
                     statusDiv.textContent = "Aponte a câmera para o código.";
                     toggleScanButton.disabled = false;
                 }).catch(err => {
-                    statusDiv.textContent = `Erro ao iniciar câmera.`;
-                    alert(`ERRO: ${err}. Verifique a permissão da câmera.`);
+                    // CORREÇÃO: Sistema de erro mais detalhado
+                    console.error("Falha ao iniciar a câmera:", err);
+                    let errorMessage = `Erro ao iniciar: ${err.name || err}.`;
+                    if (err.name === "NotAllowedError") {
+                        errorMessage = "Permissão para a câmera foi negada. Verifique as configurações do seu navegador.";
+                    } else if (err.name === "NotFoundError") {
+                        errorMessage = "Nenhuma câmera foi encontrada no dispositivo.";
+                    } else if (err.name === "NotReadableError") {
+                        errorMessage = "A câmera já está em uso por outro aplicativo ou houve um erro de hardware.";
+                    } else if (err.name === "OverconstrainedError") {
+                        errorMessage = "A câmera não suporta as configurações solicitadas.";
+                    } else if (err.name === "TypeError") {
+                        errorMessage = "Erro de configuração. Verifique se a página está em um ambiente seguro (HTTPS).";
+                    }
+                    statusDiv.textContent = errorMessage;
                     toggleScanButton.disabled = false;
                 });
             }
@@ -181,12 +197,11 @@
                 resultsTableBody.innerHTML = '';
                 const data = snapshot.val();
                 if (data) {
-                    statusDiv.textContent = "Dados carregados.";
                     Object.keys(data).forEach(key => {
                         addResultToTable(key, data[key]);
                     });
                 } else {
-                    statusDiv.textContent = "Nenhum dado salvo ainda.";
+                    if (!isScanning) statusDiv.textContent = "Nenhum dado salvo ainda.";
                 }
             });
 
@@ -240,13 +255,11 @@
             }
         }
 
-        // CORREÇÃO: Função que espera as bibliotecas carregarem antes de rodar o app.
+        // Função que espera as bibliotecas carregarem antes de rodar o app.
         function initializeWhenReady() {
             if (typeof Html5Qrcode !== 'undefined' && typeof firebase !== 'undefined' && firebase.database) {
-                // Bibliotecas prontas, executa a aplicação.
                 runApp();
             } else {
-                // Se não estiverem prontas, espera 100ms e tenta de novo.
                 setTimeout(initializeWhenReady, 100);
             }
         }
