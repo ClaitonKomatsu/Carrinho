@@ -19,7 +19,6 @@
             margin: 20px auto; 
             position: relative; /* Necessário para posicionar o título */
         }
-        /* MELHORIA: Título identificador do campo de leitura */
         #scan-target-title {
             position: absolute;
             top: 0;
@@ -62,7 +61,6 @@
         .sim { background-color: #28a745; border-color: #218838; }
         .nao { background-color: #dc3545; border-color: #c82333; }
         
-        /* Estilos para a área de coleta */
         #staging-area {
             max-width: 500px;
             margin: 20px auto;
@@ -88,7 +86,6 @@
     <h1>Coletor de Dados</h1>
     
     <div id="reader-container">
-        <!-- MELHORIA: Título adicionado aqui -->
         <div id="scan-target-title"></div>
         <div id="reader"></div>
         <div id="status">Clique em "Nova Leitura" para começar</div>
@@ -155,18 +152,16 @@
             const readerDiv = document.getElementById('reader');
             const scanTargetTitle = document.getElementById('scan-target-title');
             
-            // Elementos da área de coleta
             const stagingArea = document.getElementById('staging-area');
             const stagingCaixa = document.getElementById('staging-caixa');
             const stagingProduto = document.getElementById('staging-produto');
             const stagingSerie = document.getElementById('staging-serie');
             const stagingAtivada = document.getElementById('staging-ativada');
 
-            // Variáveis de estado
             let html5QrCode;
             let isScanning = false;
-            let scanDebounce = false; // Flag para evitar leituras múltiplas
-            let currentScanStep = ''; // 'caixa', 'produto', 'serie'
+            let scanDebounce = false;
+            let currentScanStep = '';
             let currentData = {};
 
             html5QrCode = new Html5Qrcode("reader", { verbose: false });
@@ -174,6 +169,7 @@
             // --- Lógica Principal ---
 
             startNewScanButton.addEventListener('click', () => {
+                console.log("Botão 'Nova Leitura' clicado.");
                 resetStagingArea();
                 stagingArea.style.display = 'block';
                 currentScanStep = 'caixa';
@@ -218,22 +214,27 @@
                     ]
                 };
                 
-                // MELHORIA: Solicitação de autofoco contínuo
+                // CORREÇÃO: Simplificação das restrições da câmara para máxima compatibilidade
                 const cameraConstraints = { 
-                    facingMode: "environment",
-                    advanced: [{ focusMode: "continuous" }]
+                    facingMode: "environment"
                 };
                 
+                console.log("A tentar iniciar a câmara...");
                 html5QrCode.start(
                     cameraConstraints, 
                     config, 
                     (decodedText) => handleDecodedText(decodedText),
                     (errorMessage) => {}
                 ).then(() => {
+                    console.log("Câmara iniciada com sucesso.");
                     isScanning = true;
                     startNewScanButton.disabled = true;
                 }).catch(err => {
-                    statusDiv.textContent = `Erro ao iniciar câmera: ${err.name}`;
+                    // CORREÇÃO: Adicionado alert() para garantir que o erro seja visto pelo utilizador
+                    const errorMessage = `Erro CRÍTICO ao iniciar câmara: ${err.name} - ${err.message}`;
+                    console.error(errorMessage, err);
+                    statusDiv.textContent = errorMessage;
+                    alert(errorMessage); // Força a exibição do erro
                 });
             }
 
@@ -243,9 +244,9 @@
                     isScanning = false;
                     startNewScanButton.disabled = false;
                     document.getElementById('reader').innerHTML = "";
-                    scanTargetTitle.style.display = 'none'; // Esconde o título
+                    scanTargetTitle.style.display = 'none';
                 }).catch(err => {
-                    console.error("Falha ao parar a câmera.", err);
+                    console.error("Falha ao parar a câmara.", err);
                 });
             }
 
