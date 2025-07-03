@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leitor de QRCode com Banco de Dados</title>
-    <!-- Biblioteca do Leitor de QRCode -->
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <!-- CORREÇÃO: Alterado o CDN para uma fonte mais robusta (cdnjs) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     
     <!-- SDKs do Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
@@ -258,19 +258,38 @@
             }
         }
 
-        // CORREÇÃO: Função que espera as bibliotecas carregarem antes de rodar o app.
+        // Função de diagnóstico que espera as bibliotecas carregarem.
         function initializeWhenReady() {
-            // Verifica se os objetos globais das bibliotecas estão definidos.
-            if (typeof Html5Qrcode !== 'undefined' && typeof firebase !== 'undefined' && firebase.database) {
-                // Se estiverem prontos, executa a aplicação.
-                runApp();
-            } else {
-                // Se não, espera 100ms e tenta de novo.
-                setTimeout(initializeWhenReady, 100);
-            }
+            let attempts = 0;
+            const maxAttempts = 50; // Tenta por 5 segundos no máximo (50 * 100ms)
+
+            const intervalId = setInterval(() => {
+                const qrCodeReady = typeof Html5Qrcode !== 'undefined';
+                const firebaseReady = typeof firebase !== 'undefined' && firebase.database;
+
+                console.log(`Tentativa ${attempts + 1}: Html5Qrcode=${qrCodeReady}, Firebase=${firebaseReady}`);
+
+                if (qrCodeReady && firebaseReady) {
+                    clearInterval(intervalId);
+                    console.log("Bibliotecas prontas! Executando a aplicação.");
+                    runApp();
+                } else {
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        clearInterval(intervalId);
+                        const statusDiv = document.getElementById('status');
+                        let errorMsg = "Erro: Falha ao carregar as bibliotecas necessárias. ";
+                        if (!qrCodeReady) errorMsg += "A biblioteca do leitor de QR Code não carregou. ";
+                        if (!firebaseReady) errorMsg += "A biblioteca do Firebase não carregou.";
+                        console.error(errorMsg);
+                        statusDiv.textContent = errorMsg;
+                        alert(errorMsg);
+                    }
+                }
+            }, 100);
         }
 
-        // Inicia o processo de verificação assim que o script é lido.
+        // Inicia o processo de verificação.
         initializeWhenReady();
     </script>
 </body>
