@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leitor de QRCode e Código de Barras</title>
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #0056b3; text-align: center; }
@@ -12,36 +11,58 @@
         #reader { border: 2px solid #ccc; border-radius: 8px; }
         #status { text-align: center; font-size: 0.9em; color: #666; height: 20px; margin-top: 10px;}
         .button-container { text-align: center; margin: 20px 0; }
-        .btn { background-color: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
+        .btn {
+            background-color: #007bff; color: white; border: none; padding: 12px 20px;
+            font-size: 16px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s;
+        }
+        .btn:hover { background-color: #0056b3; }
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-stop { background-color: #dc3545; }
+        .btn-stop:hover { background-color: #c82333; }
         .btn-export { background-color: #28a745; }
+        .btn-export:hover { background-color: #218838; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         thead { background-color: #007bff; color: white; }
         th, td { border: 1px solid #ddd; text-align: left; padding: 12px; }
-        .btn-ativada { cursor: pointer; padding: 5px 10px; border-radius: 5px; border: 1px solid; color: white; font-weight: bold; width: 60px; text-align: center; }
-        .sim { background-color: #28a745; }
-        .nao { background-color: #dc3545; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .btn-ativada {
+            cursor: pointer; padding: 5px 10px; border-radius: 5px; border: 1px solid; color: white;
+            font-weight: bold; width: 60px; text-align: center;
+        }
+        .sim { background-color: #28a745; border-color: #218838; }
+        .nao { background-color: #dc3545; border-color: #c82333; }
     </style>
 </head>
 <body>
+
     <h1>Leitor de QRCode e Código de Barras</h1>
+    
     <div id="reader-container">
         <div id="reader"></div>
         <div id="status">Aguardando início da leitura...</div>
     </div>
+
     <div class="button-container">
         <button id="toggleScanButton" class="btn">Iniciar Leitura</button>
         <button id="exportButton" class="btn btn-export">Exportar para CSV</button>
     </div>
+
     <h2>Resultados</h2>
-    <p style="text-align:center; font-size: 0.8em;">Formato: <strong>caixa,produto,numero_de_serie</strong></p>
+    <p style="text-align:center; font-size: 0.8em;">O dado lido deve estar no formato: <strong>caixa,produto,numero_de_serie</strong></p>
     <table id="resultsTable">
         <thead>
-            <tr><th>Caixa</th><th>Produto</th><th>Número de Série</th><th>Ativada</th></tr>
+            <tr>
+                <th>Caixa</th>
+                <th>Produto</th>
+                <th>Número de Série</th>
+                <th>Ativada</th>
+            </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+            </tbody>
     </table>
+
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const toggleScanButton = document.getElementById('toggleScanButton');
@@ -51,18 +72,37 @@
             const scannedCodes = new Set();
             let html5QrCode;
             let isScanning = false;
+
             html5QrCode = new Html5Qrcode("reader", { verbose: false });
+
             toggleScanButton.addEventListener('click', () => {
-                if (isScanning) { stopScanning(); } else { startScanning(); }
+                if (isScanning) {
+                    stopScanning();
+                } else {
+                    startScanning();
+                }
             });
-            exportButton.addEventListener('click', () => { exportToCsv('dados_escaneados.csv'); });
+
+            exportButton.addEventListener('click', () => {
+                exportToCsv('dados_escaneados.csv');
+            });
+
             function startScanning() {
-                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                };
+                
                 statusDiv.textContent = "Iniciando câmera...";
                 toggleScanButton.disabled = true;
+
                 html5QrCode.start({ facingMode: "environment" }, config, 
-                    (decodedText, decodedResult) => { handleDecodedText(decodedText); },
-                    (errorMessage) => {}
+                    (decodedText, decodedResult) => { // success callback
+                        handleDecodedText(decodedText);
+                    },
+                    (errorMessage) => { // error callback
+                        // ignora erros de "not found"
+                    }
                 ).then(() => {
                     isScanning = true;
                     toggleScanButton.textContent = "Parar Leitura";
@@ -75,6 +115,7 @@
                     toggleScanButton.disabled = false;
                 });
             }
+
             function stopScanning() {
                 if (!isScanning) return;
                 statusDiv.textContent = "Parando a câmera...";
@@ -91,6 +132,7 @@
                     toggleScanButton.disabled = false;
                 });
             }
+
             function handleDecodedText(text) {
                 if (scannedCodes.has(text)) {
                     statusDiv.textContent = "Código já lido!";
@@ -100,9 +142,13 @@
                 scannedCodes.add(text);
                 statusDiv.textContent = `Código detectado!`;
                 const parts = text.split(',');
-                if (parts.length === 3) { addResultToTable(...parts.map(p => p.trim())); } 
-                else { addResultToTable('Formato Inválido', text, ''); }
+                if (parts.length === 3) {
+                    addResultToTable(...parts.map(p => p.trim()));
+                } else {
+                    addResultToTable('Formato Inválido', text, '');
+                }
             }
+
             function addResultToTable(caixa, produto, numeroSerie) {
                 const newRow = resultsTableBody.insertRow(0);
                 newRow.insertCell(0).textContent = caixa;
@@ -115,6 +161,7 @@
                 ativadaButton.onclick = () => toggleAtivada(ativadaButton);
                 ativadaCell.appendChild(ativadaButton);
             }
+
             function toggleAtivada(button) {
                 if (button.textContent === 'Não') {
                     button.textContent = 'Sim';
@@ -124,11 +171,17 @@
                     button.classList.replace('sim', 'nao');
                 }
             }
+
             function exportToCsv(filename) {
                 const headers = ['Caixa', 'Produto', 'Numero_de_Serie', 'Ativada'];
                 const data = Array.from(document.querySelectorAll('#resultsTable tbody tr')).map(row => {
                     const cells = row.querySelectorAll('td');
-                    return [`"${cells[0].textContent}"`,`"${cells[1].textContent}"`,`"${cells[2].textContent}"`,`"${cells[3].querySelector('button').textContent}"`];
+                    return [
+                        `"${cells[0].textContent}"`,
+                        `"${cells[1].textContent}"`,
+                        `"${cells[2].textContent}"`,
+                        `"${cells[3].querySelector('button').textContent}"`
+                    ];
                 });
                 let csvContent = headers.join(',') + '\n' + data.map(e => e.join(',')).join('\n');
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
