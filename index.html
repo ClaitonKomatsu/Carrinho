@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leitor de QRCode e Código de Barras</title>
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #0056b3; text-align: center; }
@@ -14,6 +15,7 @@
         .btn {
             background-color: #007bff; color: white; border: none; padding: 12px 20px;
             font-size: 16px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s;
+            margin: 5px;
         }
         .btn:hover { background-color: #0056b3; }
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
@@ -48,7 +50,7 @@
     </div>
 
     <h2>Resultados</h2>
-    <p style="text-align:center; font-size: 0.8em;">O dado lido deve estar no formato: <strong>caixa,produto,numero_de_serie</strong></p>
+    <p style="text-align:center; font-size: 0.8em;">Formato esperado no código: <strong>caixa,produto,numero_de_serie</strong></p>
     <table id="resultsTable">
         <thead>
             <tr>
@@ -62,7 +64,6 @@
             </tbody>
     </table>
 
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const toggleScanButton = document.getElementById('toggleScanButton');
@@ -72,7 +73,7 @@
             const scannedCodes = new Set();
             let html5QrCode;
             let isScanning = false;
-
+            
             html5QrCode = new Html5Qrcode("reader", { verbose: false });
 
             toggleScanButton.addEventListener('click', () => {
@@ -97,11 +98,11 @@
                 toggleScanButton.disabled = true;
 
                 html5QrCode.start({ facingMode: "environment" }, config, 
-                    (decodedText, decodedResult) => { // success callback
+                    (decodedText, decodedResult) => {
                         handleDecodedText(decodedText);
                     },
-                    (errorMessage) => { // error callback
-                        // ignora erros de "not found"
+                    (errorMessage) => {
+                        // ignora erros de "not found", que são normais.
                     }
                 ).then(() => {
                     isScanning = true;
@@ -111,7 +112,7 @@
                     toggleScanButton.disabled = false;
                 }).catch(err => {
                     statusDiv.textContent = `Erro ao iniciar câmera.`;
-                    alert(`ERRO: ${err}. Verifique se o navegador tem permissão para acessar a câmera.`);
+                    alert(`ERRO: ${err}. Verifique se a permissão da câmera foi concedida.`);
                     toggleScanButton.disabled = false;
                 });
             }
@@ -125,7 +126,7 @@
                     toggleScanButton.textContent = "Iniciar Leitura";
                     toggleScanButton.classList.remove('btn-stop');
                     statusDiv.textContent = "Leitura parada.";
-                    document.getElementById('reader').innerHTML = "";
+                    document.getElementById('reader').innerHTML = ""; // Limpa a visualização da câmera
                     toggleScanButton.disabled = false;
                 }).catch(err => {
                     statusDiv.textContent = "Erro ao parar a câmera.";
@@ -150,7 +151,7 @@
             }
 
             function addResultToTable(caixa, produto, numeroSerie) {
-                const newRow = resultsTableBody.insertRow(0);
+                const newRow = resultsTableBody.insertRow(0); // Insere no topo para ver os mais recentes primeiro
                 newRow.insertCell(0).textContent = caixa;
                 newRow.insertCell(1).textContent = produto;
                 newRow.insertCell(2).textContent = numeroSerie;
@@ -173,9 +174,10 @@
             }
 
             function exportToCsv(filename) {
-                const headers = ['Caixa', 'Produto', 'Numero_de_Serie', 'Ativada'];
+                const headers = ['Caixa', 'Produto', 'Numero de Serie', 'Ativada'];
                 const data = Array.from(document.querySelectorAll('#resultsTable tbody tr')).map(row => {
                     const cells = row.querySelectorAll('td');
+                    // Garante que o conteúdo seja encapsulado em aspas para evitar problemas com vírgulas
                     return [
                         `"${cells[0].textContent}"`,
                         `"${cells[1].textContent}"`,
@@ -183,7 +185,8 @@
                         `"${cells[3].querySelector('button').textContent}"`
                     ];
                 });
-                let csvContent = headers.join(',') + '\n' + data.map(e => e.join(',')).join('\n');
+                // Inverte a ordem dos dados para que o CSV siga a mesma ordem da tabela (mais novo primeiro)
+                let csvContent = headers.join(',') + '\n' + data.reverse().map(e => e.join(',')).join('\n');
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
