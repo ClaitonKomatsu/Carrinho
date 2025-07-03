@@ -14,9 +14,30 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #0056b3; text-align: center; }
-        #reader-container { max-width: 500px; margin: 20px auto; }
+        #reader-container { 
+            max-width: 500px; 
+            margin: 20px auto; 
+            position: relative; /* Necessário para posicionar o título */
+        }
+        /* MELHORIA: Título identificador do campo de leitura */
+        #scan-target-title {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 86, 179, 0.8);
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            z-index: 10;
+            display: none; /* Começa escondido */
+        }
         #reader { border: 2px solid #ccc; border-radius: 8px; min-height: 250px; background-color: #000; transition: border-color 0.3s; }
-        #reader.scan-success { border-color: #28a745; }
+        #reader.scan-success { border-color: #28a745; box-shadow: 0 0 15px #28a745; }
         #status { text-align: center; font-size: 1.1em; color: #0056b3; font-weight: bold; height: 40px; margin-top: 10px; display: flex; align-items: center; justify-content: center;}
         .button-container { text-align: center; margin: 20px 0; }
         .btn {
@@ -67,6 +88,8 @@
     <h1>Coletor de Dados</h1>
     
     <div id="reader-container">
+        <!-- MELHORIA: Título adicionado aqui -->
+        <div id="scan-target-title"></div>
         <div id="reader"></div>
         <div id="status">Clique em "Nova Leitura" para começar</div>
     </div>
@@ -130,6 +153,7 @@
             const resultsTableBody = document.querySelector('#resultsTable tbody');
             const statusDiv = document.getElementById('status');
             const readerDiv = document.getElementById('reader');
+            const scanTargetTitle = document.getElementById('scan-target-title');
             
             // Elementos da área de coleta
             const stagingArea = document.getElementById('staging-area');
@@ -181,7 +205,6 @@
 
             function startScanning() {
                 if (isScanning) return;
-                // MELHORIA: Configuração otimizada para melhor performance
                 const config = { 
                     fps: 10, 
                     qrbox: { width: 250, height: 150 },
@@ -195,11 +218,17 @@
                     ]
                 };
                 
+                // MELHORIA: Solicitação de autofoco contínuo
+                const cameraConstraints = { 
+                    facingMode: "environment",
+                    advanced: [{ focusMode: "continuous" }]
+                };
+                
                 html5QrCode.start(
-                    { facingMode: "environment" }, 
+                    cameraConstraints, 
                     config, 
                     (decodedText) => handleDecodedText(decodedText),
-                    (errorMessage) => {} // Ignora erros de "código não encontrado"
+                    (errorMessage) => {}
                 ).then(() => {
                     isScanning = true;
                     startNewScanButton.disabled = true;
@@ -214,6 +243,7 @@
                     isScanning = false;
                     startNewScanButton.disabled = false;
                     document.getElementById('reader').innerHTML = "";
+                    scanTargetTitle.style.display = 'none'; // Esconde o título
                 }).catch(err => {
                     console.error("Falha ao parar a câmera.", err);
                 });
@@ -222,8 +252,8 @@
             function handleDecodedText(decodedText) {
                 if (!isScanning || scanDebounce) return;
 
-                scanDebounce = true; // Ativa a trava para evitar novas leituras
-                readerDiv.classList.add('scan-success'); // Feedback visual
+                scanDebounce = true;
+                readerDiv.classList.add('scan-success');
 
                 setTimeout(() => {
                     switch (currentScanStep) {
@@ -246,27 +276,33 @@
                             break;
                     }
                     updateStatusMessage();
-                    readerDiv.classList.remove('scan-success'); // Remove o feedback visual
-                    scanDebounce = false; // Libera a trava para a próxima leitura
-                }, 500); // Pausa de 500ms
+                    readerDiv.classList.remove('scan-success');
+                    scanDebounce = false;
+                }, 500);
             }
 
             function updateStatusMessage() {
+                scanTargetTitle.style.display = 'block';
                 switch (currentScanStep) {
                     case 'caixa':
                         statusDiv.textContent = 'Aponte para o código da CAIXA';
+                        scanTargetTitle.textContent = 'Lendo: CAIXA';
                         break;
                     case 'produto':
                         statusDiv.textContent = 'Aponte para o código do PRODUTO';
+                        scanTargetTitle.textContent = 'Lendo: PRODUTO';
                         break;
                     case 'serie':
                         statusDiv.textContent = 'Aponte para o NÚMERO DE SÉRIE';
+                        scanTargetTitle.textContent = 'Lendo: Nº SÉRIE';
                         break;
                     case 'pronto':
                         statusDiv.textContent = 'Leitura concluída. Clique em SALVAR.';
+                        scanTargetTitle.style.display = 'none';
                         break;
                     default:
                         statusDiv.textContent = 'Clique em "Nova Leitura" para começar';
+                        scanTargetTitle.style.display = 'none';
                 }
             }
 
@@ -283,16 +319,13 @@
                 updateStatusMessage();
             }
 
-            // --- Lógica do Banco de Dados (Carregar Tabela) ---
             leiturasRef.on('value', (snapshot) => {
                 resultsTableBody.innerHTML = '';
                 const data = snapshot.val();
                 if (data) {
-                    // Ordena as chaves para mostrar os mais recentes primeiro
                     const sortedKeys = Object.keys(data).sort((a, b) => {
                         return new Date(data[b].timestamp) - new Date(data[a].timestamp);
                     });
-
                     sortedKeys.forEach(key => {
                         addResultToTable(key, data[key]);
                     });
@@ -300,7 +333,7 @@
             });
 
             function addResultToTable(key, data) {
-                const newRow = resultsTableBody.insertRow(); // Insere no final para manter a ordem
+                const newRow = resultsTableBody.insertRow();
                 newRow.setAttribute('data-key', key);
                 
                 newRow.insertCell(0).textContent = data.caixa;
@@ -308,7 +341,6 @@
                 newRow.insertCell(2).textContent = data.numeroSerie;
                 
                 const ativadaCell = newRow.insertCell(3);
-                // MELHORIA: Botão interativo na tabela principal
                 const ativadaButton = document.createElement('button');
                 ativadaButton.textContent = data.ativada;
                 ativadaButton.className = data.ativada === 'Sim' ? 'btn-ativada sim' : 'btn-ativada nao';
@@ -321,7 +353,6 @@
                 database.ref('leituras/' + key).update({ ativada: newValue });
             }
 
-            // --- Lógica da Exportação ---
             exportButton.addEventListener('click', () => {
                 exportToCsv('dados_coletados.csv');
             });
