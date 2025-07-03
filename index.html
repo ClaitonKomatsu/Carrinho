@@ -104,7 +104,6 @@
         <div class="staging-item"><span>Nº Série:</span> <span id="staging-serie" class="data">Aguardando...</span></div>
         <div class="staging-item"><span>Ativada:</span> <button id="staging-ativada" class="btn-ativada nao">Não</button></div>
         <div class="button-container">
-            <!-- MELHORIA: Botão para limpar a última leitura -->
             <button id="clearLastButton" class="btn btn-clear" disabled>Limpar Última</button>
             <button id="saveButton" class="btn btn-export" disabled>Salvar Leitura</button>
         </div>
@@ -228,16 +227,19 @@
 
             function startScanning() {
                 if (isScanning) return;
+                // MELHORIA: Configuração otimizada para códigos de barras EAN-13
                 const config = { 
                     fps: 10, 
-                    qrbox: { width: 280, height: 180 },
+                    qrbox: { width: 300, height: 150 }, // Caixa mais retangular
                     supportedScanTypes: [
                         Html5QrcodeScanType.SCAN_TYPE_CAMERA
                     ],
-                    // MELHORIA: Ativa o leitor nativo do browser para mais precisão
-                    experimentalFeatures: {
-                        useBarCodeDetectorIfSupported: true
-                    }
+                    // Força o uso do leitor da biblioteca, mais consistente para EAN-13
+                    formatsToSupport: [ 
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128
+                    ]
                 };
                 
                 const cameraConstraints = { 
