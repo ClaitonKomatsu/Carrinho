@@ -47,7 +47,7 @@
     
     <div id="reader-container">
         <div id="reader"></div>
-        <div id="status">Aguardando bibliotecas...</div>
+        <div id="status">Carregando aplicação...</div>
     </div>
 
     <div class="button-container">
@@ -101,7 +101,14 @@
             
             statusDiv.textContent = "Pronto para iniciar a leitura.";
             
-            html5QrCode = new Html5Qrcode("reader", { verbose: false });
+            try {
+                html5QrCode = new Html5Qrcode("reader", { verbose: false });
+            } catch (e) {
+                statusDiv.textContent = "Erro ao inicializar o leitor de QRCode.";
+                console.error("Erro no construtor do Html5Qrcode:", e);
+                alert("Erro fatal ao inicializar o leitor de QRCode. Verifique o console para detalhes.");
+                return;
+            }
 
             // --- Lógica do Leitor de QR Code ---
             toggleScanButton.addEventListener('click', () => {
@@ -123,7 +130,6 @@
                     statusDiv.textContent = "Aponte a câmera para o código.";
                     toggleScanButton.disabled = false;
                 }).catch(err => {
-                    // CORREÇÃO: Sistema de erro mais detalhado
                     console.error("Falha ao iniciar a câmera:", err);
                     let errorMessage = `Erro ao iniciar: ${err.name || err}.`;
                     if (err.name === "NotAllowedError") {
@@ -132,12 +138,9 @@
                         errorMessage = "Nenhuma câmera foi encontrada no dispositivo.";
                     } else if (err.name === "NotReadableError") {
                         errorMessage = "A câmera já está em uso por outro aplicativo ou houve um erro de hardware.";
-                    } else if (err.name === "OverconstrainedError") {
-                        errorMessage = "A câmera não suporta as configurações solicitadas.";
-                    } else if (err.name === "TypeError") {
-                        errorMessage = "Erro de configuração. Verifique se a página está em um ambiente seguro (HTTPS).";
                     }
                     statusDiv.textContent = errorMessage;
+                    alert(errorMessage);
                     toggleScanButton.disabled = false;
                 });
             }
@@ -255,16 +258,19 @@
             }
         }
 
-        // Função que espera as bibliotecas carregarem antes de rodar o app.
+        // CORREÇÃO: Função que espera as bibliotecas carregarem antes de rodar o app.
         function initializeWhenReady() {
+            // Verifica se os objetos globais das bibliotecas estão definidos.
             if (typeof Html5Qrcode !== 'undefined' && typeof firebase !== 'undefined' && firebase.database) {
+                // Se estiverem prontos, executa a aplicação.
                 runApp();
             } else {
+                // Se não, espera 100ms e tenta de novo.
                 setTimeout(initializeWhenReady, 100);
             }
         }
 
-        // Inicia o processo de verificação.
+        // Inicia o processo de verificação assim que o script é lido.
         initializeWhenReady();
     </script>
 </body>
