@@ -41,7 +41,6 @@
         .btn-danger { background-color: var(--danger-color); }
         .btn-secondary { background-color: var(--secondary-color); }
 
-        /* ✨ 1. Botões Salvar/Excluir ainda menores */
         .btn-sm {
             padding: 2px 6px;
             font-size: 0.75rem;
@@ -54,7 +53,14 @@
         .filter-container .btn { margin-bottom: 15px; height: 50px; }
         .maintenance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
         .maintenance-item input[type="text"] { width: calc(100% - 100px); display: inline-block; margin-right: 10px; }
-        .maintenance-item .btn-sm { width: 85px; vertical-align: top; padding: 12px 10px; }
+        
+        /* ✨ CORREÇÃO: O seletor agora usa '>' para afetar APENAS o botão "Adicionar", que é filho direto do item, e não os botões dentro da tabela. */
+        .maintenance-item > .btn-sm { 
+            width: 85px; 
+            vertical-align: top; 
+            padding: 12px 10px; 
+        }
+
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; vertical-align: middle; }
         thead { background-color: var(--light-color); }
@@ -65,7 +71,7 @@
         .maintenance-item table td:last-child {
             width: 25%;
             text-align: right;
-            white-space: nowrap; /* Impede que os botões quebrem a linha */
+            white-space: nowrap;
         }
        
         .confirm-btns { display: flex; gap: 5px; align-items: center; }
@@ -93,13 +99,10 @@
                 <label for="p1">Publicador 1:</label> <select id="p1"></select>
                 <label for="p2">Publicador 2:</label> <select id="p2"></select>
                 <label for="p3">Publicador 3:</label> <select id="p3"></select>
-                
                 <label for="inicio">Início:</label> 
                 <input type="datetime-local" id="inicio" step="900" onchange="snapTo15Min(event)">
-                
                 <label for="fim">Fim:</label> 
                 <input type="datetime-local" id="fim" step="900" onchange="snapTo15Min(event)">
-
                 <div class="form-actions">
                     <button type="button" id="saveButton" class="btn btn-primary" onclick="salvarEscala()">Salvar Escala</button>
                     <button type="button" id="cancelButton" class="btn btn-secondary" onclick="cancelarEdicao()" style="display: none;">Cancelar</button>
@@ -167,9 +170,6 @@
         const db = firebase.database();
         let escalaEditId = null;
 
-        // --- FUNÇÕES DE GERENCIAMENTO DE ESCALAS ---
-
-        // ✨ 4. Função `salvarEscala` modificada para async e para validar conflitos
         async function salvarEscala() {
             const inicioStr = document.getElementById('inicio').value;
             const fimStr = document.getElementById('fim').value;
@@ -185,20 +185,17 @@
             };
             if (dadosForm.publicadores.length === 0) { alert("Adicione pelo menos um publicador."); return; }
 
-            // --- INÍCIO DA VALIDAÇÃO DE CONFLITO ---
             const todasEscalasSnapshot = await db.ref('escalas').once('value');
             let conflitoEncontrado = false;
 
             todasEscalasSnapshot.forEach(child => {
                 if (conflitoEncontrado) return;
-                // Ignorar a própria escala durante a edição
                 if (escalaEditId && child.key === escalaEditId) return;
 
                 const escalaExistente = child.val();
                 const inicioExistente = new Date(escalaExistente.inicio);
                 const fimExistente = new Date(escalaExistente.fim);
 
-                // Checar sobreposição de horários: (StartA < EndB) and (EndA > StartB)
                 const haSobreposicao = dadosForm.inicio < fimExistente && dadosForm.fim > inicioExistente;
 
                 if (haSobreposicao) {
@@ -219,18 +216,14 @@
                 }
             });
 
-            if (conflitoEncontrado) {
-                return; // Para a execução se encontrou conflito
-            }
-            // --- FIM DA VALIDAÇÃO DE CONFLITO ---
+            if (conflitoEncontrado) { return; }
 
-            // Se passou na validação, continuar com o processo de salvar
             const publicadoresParaSalvar = dadosForm.publicadores.map(nome => ({ nome, status: 'amarelo' }));
             const dadosParaSalvar = {
                 ponto: dadosForm.ponto,
                 equipamento: dadosForm.equipamento,
                 publicadores: publicadoresParaSalvar,
-                inicio: inicioStr, // Salva como string novamente
+                inicio: inicioStr,
                 fim: fimStr
             };
             
@@ -254,7 +247,6 @@
             }
         }
 
-        // ... (demais funções de escala sem alteração) ...
         function listarEscalas() {
             const filtroNome = (document.getElementById("filtro")?.value || "").toLowerCase();
             const filtroPonto = (document.getElementById("filtroPonto")?.value || "").toLowerCase();
@@ -336,9 +328,6 @@
             listarEscalas();
         }
 
-        // --- FUNÇÕES DE MANUTENÇÃO DE TABELAS ---
-
-        // ✨ 3. Função `listarTabela` modificada para ordenar alfabeticamente
         function listarTabela(caminho, campo, tbodyId) {
             const tbody = document.getElementById(tbodyId);
             tbody.innerHTML = "";
@@ -350,10 +339,8 @@
                     items.push({ key: child.key, text: nome });
                 });
 
-                // Ordenar o array de itens alfabeticamente
                 items.sort((a, b) => a.text.localeCompare(b.text, 'pt-BR'));
 
-                // Renderizar a tabela a partir do array ordenado
                 items.forEach(item => {
                     const inputId = `${tbodyId}_${item.key}`;
                     const tr = document.createElement("tr");
@@ -387,10 +374,6 @@
             db.ref(`${caminho}/${id}`).update(dados).then(callback);
         }
         
-
-        // --- FUNÇÕES UTILITÁRIAS ---
-        
-        // ✨ 2. Nova função para arredondar o tempo para o intervalo de 15 min mais próximo
         function snapTo15Min(event) {
             const input = event.target;
             if (!input.value) return;
@@ -399,7 +382,6 @@
             const minutes = date.getMinutes();
             const roundedMinutes = Math.round(minutes / 15) * 15;
             
-            // Se arredondar para 60, zera os minutos e adiciona 1 hora
             if (roundedMinutes === 60) {
                 date.setHours(date.getHours() + 1);
                 date.setMinutes(0);
@@ -407,7 +389,6 @@
                 date.setMinutes(roundedMinutes);
             }
             
-            // Formatar de volta para YYYY-MM-DDTHH:MM
             const year = date.getFullYear();
             const month = (date.getMonth() + 1).toString().padStart(2, '0');
             const day = date.getDate().toString().padStart(2, '0');
@@ -427,7 +408,7 @@
         
         function carregarOpcoes(caminho, selectId) {
             const select = document.getElementById(selectId);
-if (!select) return;
+            if (!select) return;
             db.ref(caminho).once('value').then(snapshot => {
                 const currentValue = select.value;
                 select.innerHTML = '<option value="">Selecione</option>';
