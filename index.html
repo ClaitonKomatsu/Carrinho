@@ -40,40 +40,25 @@
         .btn-success { background-color: var(--success-color); }
         .btn-danger { background-color: var(--danger-color); }
         .btn-secondary { background-color: var(--secondary-color); }
-
         .btn-sm {
             padding: 2px 6px;
             font-size: 0.75rem;
             line-height: 1.4;
             margin: 0 2px;
         }
-        
         .filter-container { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
         .filter-container div { flex: 1; min-width: 200px; }
         .filter-container .btn { margin-bottom: 15px; height: 50px; }
         .maintenance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
         .maintenance-item input[type="text"] { width: calc(100% - 100px); display: inline-block; margin-right: 10px; }
-        
-        /* ✨ CORREÇÃO: O seletor agora usa '>' para afetar APENAS o botão "Adicionar", que é filho direto do item, e não os botões dentro da tabela. */
-        .maintenance-item > .btn-sm { 
-            width: 85px; 
-            vertical-align: top; 
-            padding: 12px 10px; 
-        }
-
+        .maintenance-item > .btn-sm { width: 85px; vertical-align: top; padding: 12px 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; vertical-align: middle; }
         thead { background-color: var(--light-color); }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
-        
         .maintenance-item table { table-layout: fixed; }
         .maintenance-item table td:first-child { width: 75%; }
-        .maintenance-item table td:last-child {
-            width: 25%;
-            text-align: right;
-            white-space: nowrap;
-        }
-       
+        .maintenance-item table td:last-child { width: 25%; text-align: right; white-space: nowrap; }
         .confirm-btns { display: flex; gap: 5px; align-items: center; }
         .confirm-btns button { width: 30px; height: 30px; border: none; border-radius: 50%; cursor: pointer; color: white;
             font-size: 16px; line-height: 30px; text-align: center; opacity: 0.4; transition: opacity 0.2s, transform 0.2s;
@@ -374,11 +359,16 @@
             db.ref(`${caminho}/${id}`).update(dados).then(callback);
         }
         
+        // ✨ FUNÇÃO ATUALIZADA: Garante que segundos e milissegundos sejam sempre zerados.
         function snapTo15Min(event) {
             const input = event.target;
             if (!input.value) return;
 
             const date = new Date(input.value);
+            
+            // ✨ NOVO: Zera os segundos e milissegundos para garantir a precisão.
+            date.setSeconds(0, 0);
+
             const minutes = date.getMinutes();
             const roundedMinutes = Math.round(minutes / 15) * 15;
             
@@ -417,7 +407,7 @@
                     const val = child.val();
                     let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || "Sem nome";
                     options.push(texto);
-                });
+});
                 
                 options.sort((a,b) => a.localeCompare(b, 'pt-BR'));
                 
