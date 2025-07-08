@@ -48,29 +48,34 @@
         .maintenance-item input[type="text"] { width: calc(100% - 100px); display: inline-block; margin-right: 10px; }
         .maintenance-item > .btn-sm { width: 85px; vertical-align: top; padding: 12px 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        
-        /* ✨ 2. Altura das linhas reduzida */
         th, td { border: 1px solid var(--border-color); padding: 4px 8px; text-align: left; vertical-align: middle; }
-        
         thead { background-color: var(--light-color); }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         .maintenance-item table { table-layout: fixed; }
         .maintenance-item table td:first-child { width: 75%; }
-        
-        /* ✨ 1. Botões empilhados verticalmente */
         .action-cell { width: 25%; text-align: center; }
-        .action-cell .btn {
-            display: block;
-            width: 100%;
-            margin-bottom: 3px;
-        }
+        .action-cell .btn { display: block; width: 100%; margin-bottom: 3px; }
         .action-cell .btn:last-child { margin-bottom: 0; }
 
+        /* ✨ 2. Botões de status menores e com mais contraste entre ativo/inativo */
         .confirm-btns { display: flex; gap: 5px; align-items: center; }
-        .confirm-btns button { width: 30px; height: 30px; border: none; border-radius: 50%; cursor: pointer; color: white;
-            font-size: 16px; line-height: 30px; text-align: center; opacity: 0.4; transition: opacity 0.2s, transform 0.2s;
+        .confirm-btns button {
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+            line-height: 22px; /* Mesmo valor da altura para centralizar o ícone */
+            text-align: center;
+            opacity: 0.25; /* Deixando os inativos ainda mais claros */
+            transition: opacity 0.2s, transform 0.2s;
         }
-        .confirm-btns button.active { opacity: 1; transform: scale(1.1); }
+        .confirm-btns button.active {
+            opacity: 1;
+            transform: scale(1.1);
+        }
         .status-container > div { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
         .verde { background: var(--success-color); }
         .amarelo { background: var(--warning-color); }
@@ -268,14 +273,16 @@
                             <button class="amarelo ${p.status === 'amarelo' ? 'active' : ''}" title="Talvez" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'amarelo')">?</button>
                             <button class="vermelho ${p.status === 'vermelho' ? 'active' : ''}" title="Não irá" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'vermelho')">✖</button>
                         </span></div>`).join('');
+                    
+                    // ✨ 1. Botões de ação da tabela de escalas com ÍCONES para economizar espaço
                     row.innerHTML = `
                         <td>${esc.ponto}</td><td>${esc.equipamento}</td>
                         <td><div class="status-container">${confirmacoes}</div></td>
                         <td>${new Date(esc.inicio).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
                         <td>${new Date(esc.fim).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
                         <td class="action-cell">
-                            <button class="btn btn-sm btn-secondary" onclick="iniciarEdicao('${esc.key}')">Alterar</button>
-                            <button class="btn btn-sm btn-danger" onclick="excluirEntrada('escalas','${esc.key}', listarEscalas)">Excluir</button>
+                            <button class="btn btn-sm btn-secondary" title="Alterar" onclick="iniciarEdicao('${esc.key}')">✏️</button>
+                            <button class="btn btn-sm btn-danger" title="Excluir" onclick="excluirEntrada('escalas','${esc.key}', listarEscalas)">🗑️</button>
                         </td>`;
                     tbody.appendChild(row);
                 });
@@ -317,7 +324,7 @@
         function cancelarEdicao() {
             escalaEditId = null;
             document.getElementById('form-escala').reset();
-            document.getElementById('fim').min = ''; // Limpa a restrição de data mínima
+            document.getElementById('fim').min = '';
             document.getElementById('form-title').textContent = "Nova Escala";
             document.getElementById('saveButton').textContent = "Salvar Escala";
             document.getElementById('cancelButton').style.display = 'none';
@@ -370,46 +377,35 @@
             db.ref(`${caminho}/${id}`).update(dados).then(callback);
         }
         
-        // ✨ 4. NOVA função para lidar com a mudança do campo Início
         function handleInicioChange(event) {
-            // Primeiro, ajusta o tempo do próprio campo Início para :00 ou :30
             snapTo30Min(event);
-            
             const inicioInput = event.target;
             const fimInput = document.getElementById('fim');
-
-            // Depois, copia o valor para o campo Fim e define a restrição de data mínima
             if (inicioInput.value) {
                 fimInput.value = inicioInput.value;
                 fimInput.min = inicioInput.value;
             }
         }
-
-        // ✨ 3. Função renomeada e ajustada para intervalos de 30 minutos
+        
+        // Esta função já garante os intervalos de 30 min e zera os segundos. Nenhuma alteração necessária aqui.
         function snapTo30Min(event) {
             const input = event.target;
             if (!input.value) return;
-
             const date = new Date(input.value);
             date.setSeconds(0, 0);
-
             const minutes = date.getMinutes();
-            // Arredonda para o :00 ou :30 mais próximo
             const roundedMinutes = Math.round(minutes / 30) * 30;
-            
             if (roundedMinutes === 60) {
                 date.setHours(date.getHours() + 1);
                 date.setMinutes(0);
             } else {
                 date.setMinutes(roundedMinutes);
             }
-            
             const year = date.getFullYear();
             const month = (date.getMonth() + 1).toString().padStart(2, '0');
             const day = date.getDate().toString().padStart(2, '0');
             const hours = date.getHours().toString().padStart(2, '0');
             const finalMinutes = date.getMinutes().toString().padStart(2, '0');
-            
             input.value = `${year}-${month}-${day}T${hours}:${finalMinutes}`;
         }
 
@@ -433,9 +429,7 @@
                     let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || "Sem nome";
                     options.push(texto);
                 });
-                
                 options.sort((a,b) => a.localeCompare(b, 'pt-BR'));
-                
                 options.forEach(texto => {
                     const option = new Option(texto, texto);
                     select.add(option);
