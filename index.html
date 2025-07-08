@@ -26,7 +26,7 @@
         h1 { text-align: center; margin-bottom: 2rem; font-weight: 700; }
         .section { background: #fff; padding: 25px; margin-bottom: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); }
         label { display: block; margin-bottom: 5px; font-weight: 500; }
-        input[type="text"], input[type="date"], input[type="datetime-local"], select {
+        input[type="text"], input[type="date"], select {
             width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color);
             border-radius: var(--border-radius); font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s;
         }
@@ -53,17 +53,14 @@
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         .maintenance-item table { table-layout: fixed; }
         .maintenance-item table td:first-child { width: 75%; }
-        .maintenance-item .action-cell { width: 25%; text-align: center; }
-        .maintenance-item .action-cell .btn { display: block; width: 100%; margin-bottom: 3px; }
-        .maintenance-item .action-cell .btn:last-child { margin-bottom: 0; }
         
-        /* ✨ 1. Largura da coluna Ações da tabela principal reduzida */
-        .th-acoes, .escalas-action-cell {
-            width: 8% !important; /* Força a coluna a ser bem estreita */
-            text-align: center;
-        }
-        .escalas-action-cell .btn { font-size: 1rem; padding: 2px 5px; } /* Ajuste fino nos botões de ícone */
+        /* ✨ 2. Botões de manutenção mais finos */
+        .maintenance-item .action-cell { width: 25%; text-align: center; }
+        .maintenance-item .action-cell .btn { display: block; width: 100%; margin-bottom: 3px; padding: 2px 4px; }
+        .maintenance-item .action-cell .btn:last-child { margin-bottom: 0; }
 
+        .th-acoes, .escalas-action-cell { width: 8% !important; text-align: center; }
+        .escalas-action-cell .btn { font-size: 1rem; padding: 2px 5px; }
         .confirm-btns { display: flex; gap: 5px; align-items: center; }
         .confirm-btns button {
             width: 22px; height: 22px; border: none; border-radius: 50%; cursor: pointer; color: white;
@@ -76,6 +73,12 @@
         .amarelo { background: var(--warning-color); }
         .vermelho { background: var(--danger-color); }
         .form-actions { display: flex; gap: 10px; }
+        
+        /* ✨ 3. Estilos para os novos seletores de data/hora */
+        .datetime-group { display: flex; gap: 10px; }
+        .datetime-group input[type="date"] { flex-grow: 2; }
+        .datetime-group select { flex-grow: 1; }
+        
         @media (max-width: 768px) { .filter-container .btn { width: 100%; margin-bottom: 0; } }
     </style>
 </head>
@@ -91,10 +94,27 @@
                 <label for="p1">Publicador 1:</label> <select id="p1"></select>
                 <label for="p2">Publicador 2:</label> <select id="p2"></select>
                 <label for="p3">Publicador 3:</label> <select id="p3"></select>
-                <label for="inicio">Início:</label> 
-                <input type="datetime-local" id="inicio" step="1800" onchange="handleInicioChange(event)">
-                <label for="fim">Fim:</label> 
-                <input type="datetime-local" id="fim" step="1800" onchange="snapTo30Min(event)">
+                
+                <label for="inicio-data">Início:</label>
+                <div class="datetime-group">
+                    <input type="date" id="inicio-data" onchange="handleInicioChange()">
+                    <select id="inicio-hora" onchange="handleInicioChange()"></select>
+                    <select id="inicio-minuto" onchange="handleInicioChange()">
+                        <option value="00">00</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+
+                <label for="fim-data">Fim:</label>
+                <div class="datetime-group">
+                    <input type="date" id="fim-data">
+                    <select id="fim-hora"></select>
+                    <select id="fim-minuto">
+                        <option value="00">00</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+
                 <div class="form-actions">
                     <button type="button" id="saveButton" class="btn btn-primary" onclick="salvarEscala()">Salvar Escala</button>
                     <button type="button" id="cancelButton" class="btn btn-secondary" onclick="cancelarEdicao()" style="display: none;">Cancelar</button>
@@ -163,10 +183,20 @@
         const db = firebase.database();
         let escalaEditId = null;
 
+        // ✨ 3. Lógica de salvar reescrita para os novos campos de data/hora
         async function salvarEscala() {
-            const inicioStr = document.getElementById('inicio').value;
-            const fimStr = document.getElementById('fim').value;
-            if (!inicioStr || !fimStr) { alert("Os campos Início e Fim são obrigatórios."); return; }
+            const inicioData = document.getElementById('inicio-data').value;
+            const inicioHora = document.getElementById('inicio-hora').value;
+            const inicioMinuto = document.getElementById('inicio-minuto').value;
+            const fimData = document.getElementById('fim-data').value;
+            const fimHora = document.getElementById('fim-hora').value;
+            const fimMinuto = document.getElementById('fim-minuto').value;
+
+            if (!inicioData || !fimData) { alert("As datas de Início e Fim são obrigatórias."); return; }
+            
+            const inicioStr = `${inicioData}T${inicioHora}:${inicioMinuto}`;
+            const fimStr = `${fimData}T${fimHora}:${fimMinuto}`;
+
             if (fimStr <= inicioStr) { alert("O horário FIM deve ser maior que o horário INÍCIO."); return; }
 
             const dadosForm = {
@@ -200,7 +230,7 @@
                         conflitoEncontrado = true;
                     }
                     dadosForm.publicadores.forEach(pub => {
-                        if (escalaExistente.publicadores.some(p => p.nome === pub)) {
+                        if ((escalaExistente.publicadores || []).some(p => p.nome === pub)) {
                             alert(`CONFLITO: O publicador '${pub}' já está escalado neste horário.`);
                             conflitoEncontrado = true;
                         }
@@ -219,66 +249,87 @@
                 fim: fimStr
             };
             
-            if (escalaEditId) {
-                 db.ref('escalas/' + escalaEditId).once('value', (snapshot) => {
-                    const publicadoresAntigos = snapshot.val().publicadores || [];
-                    dadosParaSalvar.publicadores = dadosParaSalvar.publicadores.map(novoPub => {
-                        const pubAntigo = publicadoresAntigos.find(p => p.nome === novoPub.nome);
-                        return pubAntigo ? pubAntigo : novoPub;
-                    });
-                    db.ref('escalas/' + escalaEditId).update(dadosParaSalvar).then(() => {
-                        alert("Escala atualizada com sucesso!");
-                        cancelarEdicao();
-                    });
-                });
-            } else {
-                db.ref('escalas').push(dadosParaSalvar).then(() => {
-                    alert("Escala salva com sucesso!");
-                    cancelarEdicao();
-                });
-            }
-        }
+            const promise = escalaEditId ? 
+                db.ref('escalas/' + escalaEditId).update(dadosParaSalvar) : 
+                db.ref('escalas').push(dadosParaSalvar);
 
+            promise.then(() => {
+                alert(escalaEditId ? "Escala atualizada com sucesso!" : "Escala salva com sucesso!");
+                cancelarEdicao();
+            });
+        }
+        
+        // ✨ 1. Função reescrita com createElement e addEventListener para evitar bugs de renderização
         function listarEscalas() {
             const filtroNome = (document.getElementById("filtro")?.value || "").toLowerCase();
             const filtroPonto = (document.getElementById("filtroPonto")?.value || "").toLowerCase();
             const filtroData = document.getElementById("filtroData")?.value || "";
             const tbody = document.getElementById("lista-escalas");
-            tbody.innerHTML = "<tr><td colspan='6'>Carregando...</td></tr>";
+            tbody.innerHTML = `<tr><td colspan="6">Carregando...</td></tr>`;
 
             db.ref('escalas').orderByChild('inicio').once('value').then(snapshot => {
-                tbody.innerHTML = "";
-                let count = 0;
+                tbody.innerHTML = ""; // Limpa a tabela antes de adicionar as linhas
                 const escalasArray = [];
-                snapshot.forEach(child => escalasArray.push({ key: child.key, ...child.val() }));
+                snapshot.forEach(child => {
+                    escalasArray.push({ key: child.key, ...child.val() });
+                });
+
+                if (escalasArray.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6">Nenhuma escala encontrada.</td></tr>`;
+                    return;
+                }
 
                 escalasArray.reverse().forEach(esc => {
-                    const nomeMatch = filtroNome ? (esc.publicadores || []).some(p => p.nome.toLowerCase().includes(filtroNome)) : true;
-                    const pontoMatch = filtroPonto ? (esc.ponto || "").toLowerCase().includes(filtroPonto) : true;
-                    const dataMatch = filtroData ? (esc.inicio || '').startsWith(filtroData) : true;
-                    if (!nomeMatch || !pontoMatch || !dataMatch) return;
-                    count++;
-                    const row = document.createElement("tr");
-                    const confirmacoes = (esc.publicadores || []).map(p => `
-                        <div><span>${p.nome}</span>
-                        <span class="confirm-btns">
-                            <button class="verde ${p.status === 'verde' ? 'active' : ''}" title="Confirmado" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'verde')">✔</button>
-                            <button class="amarelo ${p.status === 'amarelo' ? 'active' : ''}" title="Talvez" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'amarelo')">?</button>
-                            <button class="vermelho ${p.status === 'vermelho' ? 'active' : ''}" title="Não irá" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'vermelho')">✖</button>
-                        </span></div>`).join('');
-                    
-                    row.innerHTML = `
-                        <td>${esc.ponto}</td><td>${esc.equipamento}</td>
-                        <td><div class="status-container">${confirmacoes}</div></td>
-                        <td>${new Date(esc.inicio).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
-                        <td>${new Date(esc.fim).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
-                        <td class="escalas-action-cell">
-                            <button class="btn btn-sm btn-secondary" title="Alterar" onclick="iniciarEdicao('${esc.key}')">✏️</button>
-                            <button class="btn btn-sm btn-danger" title="Excluir" onclick="excluirEntrada('escalas','${esc.key}', listarEscalas)">🗑️</button>
-                        </td>`;
-                    tbody.appendChild(row);
+                    const nomeMatch = !filtroNome || (esc.publicadores || []).some(p => p.nome.toLowerCase().includes(filtroNome));
+                    const pontoMatch = !filtroPonto || (esc.ponto || "").toLowerCase().includes(filtroPonto);
+                    const dataMatch = !filtroData || (esc.inicio || '').startsWith(filtroData);
+
+                    if (nomeMatch && pontoMatch && dataMatch) {
+                        const row = tbody.insertRow(); // Cria a linha
+
+                        // Células de dados
+                        row.insertCell().textContent = esc.ponto;
+                        row.insertCell().textContent = esc.equipamento;
+                        
+                        const publicadoresCell = row.insertCell();
+                        const statusContainer = document.createElement('div');
+                        statusContainer.className = 'status-container';
+                        (esc.publicadores || []).forEach(p => {
+                             const div = document.createElement('div');
+                             div.innerHTML = `<span>${p.nome}</span>
+                                <span class="confirm-btns">
+                                    <button class="verde ${p.status === 'verde' ? 'active' : ''}" title="Confirmado">✔</button>
+                                    <button class="amarelo ${p.status === 'amarelo' ? 'active' : ''}" title="Talvez">?</button>
+                                    <button class="vermelho ${p.status === 'vermelho' ? 'active' : ''}" title="Não irá">✖</button>
+                                </span>`;
+                             div.querySelector('.verde').onclick = () => atualizarStatus(esc.key, p.nome, 'verde');
+                             div.querySelector('.amarelo').onclick = () => atualizarStatus(esc.key, p.nome, 'amarelo');
+                             div.querySelector('.vermelho').onclick = () => atualizarStatus(esc.key, p.nome, 'vermelho');
+                             statusContainer.appendChild(div);
+                        });
+                        publicadoresCell.appendChild(statusContainer);
+                        
+                        row.insertCell().textContent = new Date(esc.inicio).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'});
+                        row.insertCell().textContent = new Date(esc.fim).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'});
+
+                        // Célula de ações
+                        const actionCell = row.insertCell();
+                        actionCell.className = 'escalas-action-cell';
+                        const btnAlterar = document.createElement('button');
+                        btnAlterar.className = 'btn btn-sm btn-secondary';
+                        btnAlterar.title = 'Alterar';
+                        btnAlterar.innerHTML = '✏️';
+                        btnAlterar.onclick = () => iniciarEdicao(esc.key);
+                        actionCell.appendChild(btnAlterar);
+                        
+                        const btnExcluir = document.createElement('button');
+                        btnExcluir.className = 'btn btn-sm btn-danger';
+                        btnExcluir.title = 'Excluir';
+                        btnExcluir.innerHTML = '🗑️';
+                        btnExcluir.onclick = () => excluirEntrada('escalas', esc.key, listarEscalas);
+                        actionCell.appendChild(btnExcluir);
+                    }
                 });
-                if(count === 0) tbody.innerHTML = "<tr><td colspan='6'>Nenhuma escala encontrada.</td></tr>";
             });
         }
         
@@ -294,18 +345,30 @@
             });
         }
         
+        // ✨ 3. Lógica de edição reescrita para os novos campos de data/hora
         function iniciarEdicao(id) {
             escalaEditId = id;
             db.ref('escalas/' + id).once('value').then(snapshot => {
                 const esc = snapshot.val();
                 if (!esc) return;
+                
+                const inicioDate = new Date(esc.inicio);
+                const fimDate = new Date(esc.fim);
+
+                document.getElementById('inicio-data').value = inicioDate.toISOString().split('T')[0];
+                document.getElementById('inicio-hora').value = inicioDate.getHours().toString().padStart(2, '0');
+                document.getElementById('inicio-minuto').value = inicioDate.getMinutes().toString().padStart(2, '0');
+                
+                document.getElementById('fim-data').value = fimDate.toISOString().split('T')[0];
+                document.getElementById('fim-hora').value = fimDate.getHours().toString().padStart(2, '0');
+                document.getElementById('fim-minuto').value = fimDate.getMinutes().toString().padStart(2, '0');
+                document.getElementById('fim-data').min = document.getElementById('inicio-data').value;
+                
                 document.getElementById('ponto').value = esc.ponto;
                 document.getElementById('equipamento').value = esc.equipamento;
-                document.getElementById('inicio').value = esc.inicio;
-                document.getElementById('fim').value = esc.fim;
-                document.getElementById('fim').min = esc.inicio;
                 ['p1', 'p2', 'p3'].forEach(pid => document.getElementById(pid).value = "");
                 (esc.publicadores || []).forEach((p, i) => { if (i < 3) document.getElementById(`p${i + 1}`).value = p.nome; });
+                
                 document.getElementById('form-title').textContent = "Alterar Escala";
                 document.getElementById('saveButton').textContent = "Atualizar Escala";
                 document.getElementById('cancelButton').style.display = 'inline-block';
@@ -313,48 +376,65 @@
             });
         }
 
-        // ✨ 2. BUG CORRIGIDO: Função agora limpa os filtros para garantir que a lista seja sempre atualizada corretamente.
         function cancelarEdicao() {
             escalaEditId = null;
             document.getElementById('form-escala').reset();
-            document.getElementById('fim').min = ''; 
-            
-            // Limpa os campos de filtro
-            document.getElementById('filtro').value = '';
-            document.getElementById('filtroPonto').value = '';
-            document.getElementById('filtroData').value = '';
-
+            document.getElementById('fim-data').min = '';
             document.getElementById('form-title').textContent = "Nova Escala";
             document.getElementById('saveButton').textContent = "Salvar Escala";
             document.getElementById('cancelButton').style.display = 'none';
+            
+            document.getElementById('filtro').value = '';
+            document.getElementById('filtroPonto').value = '';
+            document.getElementById('filtroData').value = '';
             listarEscalas();
         }
 
+        // ✨ 1. Função reescrita com createElement e addEventListener para evitar bugs de renderização
         function listarTabela(caminho, campo, tbodyId) {
             const tbody = document.getElementById(tbodyId);
             tbody.innerHTML = "";
             db.ref(caminho).once('value').then(snapshot => {
                 const items = [];
                 snapshot.forEach(child => {
-                    const val = child.val();
-                    const nome = val[campo] || "Sem nome";
-                    items.push({ key: child.key, text: nome });
+                    items.push({ key: child.key, text: child.val()[campo] || "Sem nome" });
                 });
 
                 items.sort((a, b) => a.text.localeCompare(b.text, 'pt-BR'));
 
                 items.forEach(item => {
-                    const inputId = `${tbodyId}_${item.key}`;
-                    const tr = document.createElement("tr");
-                    const callback = () => { listarTabela(caminho, campo, tbodyId); initSelects(); };
-                    const updateCallback = () => listarTabela(caminho, campo, tbodyId);
-                    tr.innerHTML = `
-                        <td><input type="text" id="${inputId}" value="${item.text}" style="font-size: 0.9rem; padding: 4px;"></td>
-                        <td class="maintenance-item action-cell">
-                            <button class="btn btn-sm btn-success" onclick="atualizarEntrada('${caminho}', '${item.key}', {'${campo}': document.getElementById('${inputId}').value}, () => { ${updateCallback.toString()}() })">Salvar</button>
-                            <button class="btn btn-sm btn-danger" onclick="excluirEntrada('${caminho}', '${item.key}', () => { ${callback.toString()}() })">Excluir</button>
-                        </td>`;
-                    tbody.appendChild(tr);
+                    const row = tbody.insertRow();
+                    const inputCell = row.insertCell();
+                    const actionCell = row.insertCell();
+                    actionCell.className = 'maintenance-item action-cell';
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = `${tbodyId}_${item.key}`;
+                    input.value = item.text;
+                    input.style.fontSize = '0.9rem';
+                    input.style.padding = '4px';
+                    inputCell.appendChild(input);
+
+                    const btnSalvar = document.createElement('button');
+                    btnSalvar.className = 'btn btn-sm btn-success';
+                    btnSalvar.textContent = 'Salvar';
+                    btnSalvar.addEventListener('click', () => {
+                        const novoValor = { [campo]: document.getElementById(input.id).value };
+                        atualizarEntrada(caminho, item.key, novoValor, () => listarTabela(caminho, campo, tbodyId));
+                    });
+                    actionCell.appendChild(btnSalvar);
+
+                    const btnExcluir = document.createElement('button');
+                    btnExcluir.className = 'btn btn-sm btn-danger';
+                    btnExcluir.textContent = 'Excluir';
+                    btnExcluir.addEventListener('click', () => {
+                        excluirEntrada(caminho, item.key, () => {
+                            listarTabela(caminho, campo, tbodyId);
+                            initSelects();
+                        });
+                    });
+                    actionCell.appendChild(btnExcluir);
                 });
             });
         }
@@ -376,37 +456,34 @@
             db.ref(`${caminho}/${id}`).update(dados).then(callback);
         }
         
-        function handleInicioChange(event) {
-            snapTo30Min(event);
-            const inicioInput = event.target;
-            const fimInput = document.getElementById('fim');
-            if (inicioInput.value) {
-                fimInput.value = inicioInput.value;
-                fimInput.min = inicioInput.value;
+        // ✨ 3. Nova função para preencher os seletores de hora
+        function popularHoras() {
+            const selects = [document.getElementById('inicio-hora'), document.getElementById('fim-hora')];
+            selects.forEach(select => {
+                for (let i = 0; i < 24; i++) {
+                    const hora = i.toString().padStart(2, '0');
+                    select.add(new Option(hora, hora));
+                }
+            });
+        }
+        
+        // ✨ 3. Função de auto-preenchimento adaptada para os novos campos
+        function handleInicioChange() {
+            const inicioData = document.getElementById('inicio-data');
+            const fimData = document.getElementById('fim-data');
+            const inicioHora = document.getElementById('inicio-hora');
+            const fimHora = document.getElementById('fim-hora');
+            const inicioMinuto = document.getElementById('inicio-minuto');
+            const fimMinuto = document.getElementById('fim-minuto');
+
+            if (inicioData.value) {
+                fimData.value = inicioData.value;
+                fimData.min = inicioData.value;
+                fimHora.value = inicioHora.value;
+                fimMinuto.value = inicioMinuto.value;
             }
         }
         
-        function snapTo30Min(event) {
-            const input = event.target;
-            if (!input.value) return;
-            const date = new Date(input.value);
-            date.setSeconds(0, 0);
-            const minutes = date.getMinutes();
-            const roundedMinutes = Math.round(minutes / 30) * 30;
-            if (roundedMinutes === 60) {
-                date.setHours(date.getHours() + 1);
-                date.setMinutes(0);
-            } else {
-                date.setMinutes(roundedMinutes);
-            }
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            const hours = date.getHours().toString().padStart(2, '0');
-            const finalMinutes = date.getMinutes().toString().padStart(2, '0');
-            input.value = `${year}-${month}-${day}T${hours}:${finalMinutes}`;
-        }
-
         function excluirEntrada(caminho, id, callback) {
             if (confirm("Tem certeza que deseja excluir este item?")) {
                 db.ref(`${caminho}/${id}`).remove().then(() => {
@@ -428,10 +505,7 @@
                     options.push(texto);
                 });
                 options.sort((a,b) => a.localeCompare(b, 'pt-BR'));
-                options.forEach(texto => {
-                    const option = new Option(texto, texto);
-                    select.add(option);
-                });
+                options.forEach(texto => select.add(new Option(texto, texto)));
                 select.value = currentValue;
             });
         }
@@ -443,6 +517,7 @@
         }
 
         window.onload = () => {
+            popularHoras();
             initSelects();
             listarEscalas();
             listarTabela('Publicadores', 'Publicador', 'tabela-publicadores');
