@@ -14,6 +14,11 @@
     th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
     .inline { display: inline-block; margin-right: 10px; vertical-align: top; }
     .edit-input { width: 200px; }
+    .btn-sm { font-size: 12px; padding: 4px 8px; }
+    .confirm-btns button { margin-right: 4px; width: 30px; height: 30px; border: none; border-radius: 50%; }
+    .verde { background: #4CAF50; }
+    .amarelo { background: #FFEB3B; }
+    .vermelho { background: #F44336; }
   </style>
   <script>
     const firebaseConfig = {
@@ -59,9 +64,10 @@
         inicio,
         fim
       };
-      db.ref('escalas').push(dados);
-      alert("Escala salva com sucesso!");
-      listarEscalas();
+      db.ref('escalas').push(dados).then(() => {
+        listarEscalas();
+        alert("Escala salva com sucesso!");
+      });
     }
 
     function listarEscalas() {
@@ -76,16 +82,25 @@
           const esc = child.val();
           if (filtroNome && !esc.publicadores?.some(p => p.toLowerCase().includes(filtroNome))) return;
           if (filtroPonto && !(esc.ponto || "").toLowerCase().includes(filtroPonto)) return;
-          if (filtroData && !(esc.inicio || "").startsWith(filtroData)) return;
+          if (filtroData && !(new Date(esc.inicio || '').toISOString().slice(0,10) === filtroData)) return;
 
           const row = document.createElement("tr");
+          const confirmacoes = (esc.publicadores || []).map(p => `
+            <div>
+              ${p} <span class="confirm-btns">
+                <button class="verde" title="Confirmado"></button>
+                <button class="amarelo" title="Talvez"></button>
+                <button class="vermelho" title="Não irá"></button>
+              </span>
+            </div>`).join('');
+
           row.innerHTML = `
             <td>${esc.ponto}</td>
             <td>${esc.equipamento}</td>
-            <td>${(esc.publicadores || []).join(', ')}</td>
+            <td>${confirmacoes}</td>
             <td>${esc.inicio}</td>
             <td>${esc.fim}</td>
-            <td><button onclick="excluirEntrada('escalas','${child.key}');listarEscalas()">Excluir</button></td>
+            <td><button class="btn-sm" onclick="excluirEntrada('escalas','${child.key}');listarEscalas()">Excluir</button></td>
           `;
           tbody.appendChild(row);
         });
@@ -112,8 +127,8 @@
           tr.innerHTML = `
             <td><input id="${inputId}" class="edit-input" value="${nome}"></td>
             <td>
-              <button onclick="atualizarEntrada('${caminho}', '${child.key}', '${campo}', document.getElementById('${inputId}').value);listarTabela('${caminho}', '${campo}', '${tbodyId}')">Salvar</button>
-              <button onclick="excluirEntrada('${caminho}', '${child.key}');listarTabela('${caminho}', '${campo}', '${tbodyId}');initSelects()">Excluir</button>
+              <button class="btn-sm" onclick="atualizarEntrada('${caminho}', '${child.key}', '${campo}', document.getElementById('${inputId}').value);listarTabela('${caminho}', '${campo}', '${tbodyId}')">Salvar</button>
+              <button class="btn-sm" onclick="excluirEntrada('${caminho}', '${child.key}');listarTabela('${caminho}', '${campo}', '${tbodyId}');initSelects()">Excluir</button>
             </td>
           `;
           tbody.appendChild(tr);
@@ -126,10 +141,11 @@
       if (!valor) return;
       const dados = {};
       dados[caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador"] = valor;
-      db.ref(caminho).push(dados);
-      alert("Adicionado com sucesso!");
-      document.getElementById(inputId).value = "";
-      initSelects();
+      db.ref(caminho).push(dados).then(() => {
+        document.getElementById(inputId).value = "";
+        initSelects();
+        listarTabela(caminho, caminho === 'Pontos' ? 'Nome do ponto' : caminho === 'Equipamentos' ? 'Equipamentos' : 'Publicador', `tabela-${caminho.toLowerCase()}`);
+      });
     }
 
     function initSelects() {
@@ -163,9 +179,9 @@
     <label>Publicador 3:</label>
     <select id="p3"></select>
     <label>Início:</label>
-    <input type="time" id="inicio">
+    <input type="datetime-local" id="inicio">
     <label>Fim:</label>
-    <input type="time" id="fim"><br>
+    <input type="datetime-local" id="fim"><br>
     <button onclick="salvarEscala()">Salvar Escala</button>
   </div>
 
@@ -173,7 +189,7 @@
     <h2>Filtrar Escalas</h2>
     <input id="filtro" placeholder="Nome do publicador">
     <input id="filtroPonto" placeholder="Nome do ponto">
-    <input id="filtroData" placeholder="Horário de início (hh:mm)">
+    <input id="filtroData" type="date" placeholder="Data">
     <button onclick="listarEscalas()">Filtrar</button>
   </div>
 
@@ -199,19 +215,19 @@
     <div class="inline">
       <h3>Publicadores</h3>
       <input id="novoPublicador">
-      <button onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button>
+      <button class="btn-sm" onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button>
       <table><tbody id="tabela-publicadores"></tbody></table>
     </div>
     <div class="inline">
       <h3>Equipamentos</h3>
       <input id="novoEquipamento">
-      <button onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button>
+      <button class="btn-sm" onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button>
       <table><tbody id="tabela-equipamentos"></tbody></table>
     </div>
     <div class="inline">
       <h3>Pontos</h3>
       <input id="novoPonto">
-      <button onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button>
+      <button class="btn-sm" onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button>
       <table><tbody id="tabela-pontos"></tbody></table>
     </div>
   </div>
