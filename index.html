@@ -398,6 +398,7 @@
                 closeModal('crud-modal');
             } catch (error) {
                 console.error("Erro ao salvar:", error);
+                alert(`Ocorreu um erro ao salvar: ${error.message}\n\nVerifique as regras de segurança do seu Firestore.`);
             }
         });
 
@@ -407,6 +408,7 @@
                     await deleteDoc(doc(db, collectionName, id));
                 } catch (error) {
                     console.error("Erro ao deletar:", error);
+                    alert(`Ocorreu um erro ao deletar: ${error.message}\n\nVerifique as regras de segurança do seu Firestore.`);
                 }
             }
         };
@@ -461,12 +463,20 @@
             const selectedEquipamento = document.getElementById('escala-equipamento-select').value;
             
             const dataToSave = { publicadores: selectedPublicadores, equipamento: selectedEquipamento };
+            const escalaDocRef = doc(db, 'escalas', date);
+            const fieldPath = `${time}.${pontoId}`;
 
             try {
-                await setDoc(doc(db, 'escalas', date), { [time]: { [pontoId]: dataToSave } }, { merge: true });
+                const docSnap = await getDoc(escalaDocRef);
+                if (docSnap.exists()) {
+                    await updateDoc(escalaDocRef, { [fieldPath]: dataToSave });
+                } else {
+                    await setDoc(escalaDocRef, { [time]: { [pontoId]: dataToSave } });
+                }
                 closeModal('escala-modal');
             } catch(error) {
                 console.error("Erro ao salvar escala:", error);
+                alert(`Ocorreu um erro ao salvar a escala: ${error.message}\n\nVerifique as regras de segurança do seu Firestore.`);
             }
         });
 
