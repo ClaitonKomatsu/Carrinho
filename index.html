@@ -12,7 +12,8 @@
     .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 30px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-    .inline { display: inline-block; margin-right: 10px; }
+    .inline { display: inline-block; margin-right: 10px; vertical-align: top; }
+    .edit-input { width: 200px; }
   </style>
   <script>
     const firebaseConfig = {
@@ -45,25 +46,38 @@
     }
 
     function salvarEscala() {
+      const inicio = document.getElementById('inicio').value;
+      const fim = document.getElementById('fim').value;
+      if (fim <= inicio) {
+        alert("O horário FIM deve ser maior que o horário INÍCIO.");
+        return;
+      }
       const dados = {
         ponto: document.getElementById('ponto').value,
         equipamento: document.getElementById('equipamento').value,
         publicadores: ["p1", "p2", "p3"].map(id => document.getElementById(id).value).filter(Boolean),
-        inicio: document.getElementById('inicio').value,
-        fim: document.getElementById('fim').value
+        inicio,
+        fim
       };
       db.ref('escalas').push(dados);
       alert("Escala salva com sucesso!");
       listarEscalas();
     }
 
-    function listarEscalas(filtro = "") {
+    function listarEscalas() {
+      const filtroNome = document.getElementById("filtro")?.value?.toLowerCase() || "";
+      const filtroPonto = document.getElementById("filtroPonto")?.value?.toLowerCase() || "";
+      const filtroData = document.getElementById("filtroData")?.value || "";
+
       const tbody = document.getElementById("lista-escalas");
       tbody.innerHTML = "";
       db.ref('escalas').once('value').then(snapshot => {
         snapshot.forEach(child => {
           const esc = child.val();
-          if (filtro && !esc.publicadores?.some(p => p.includes(filtro))) return;
+          if (filtroNome && !esc.publicadores?.some(p => p.toLowerCase().includes(filtroNome))) return;
+          if (filtroPonto && !(esc.ponto || "").toLowerCase().includes(filtroPonto)) return;
+          if (filtroData && !(esc.inicio || "").startsWith(filtroData)) return;
+
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${esc.ponto}</td>
@@ -78,15 +92,12 @@
       });
     }
 
-    function adicionarSimples(caminho, inputId) {
-      const valor = document.getElementById(inputId).value;
-      if (!valor) return;
-      const dados = {};
-      dados[caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador"] = valor;
-      db.ref(caminho).push(dados);
-      alert("Adicionado com sucesso!");
-      document.getElementById(inputId).value = "";
-      initSelects();
+    function excluirEntrada(caminho, id) {
+      db.ref(`${caminho}/${id}`).remove();
+    }
+
+    function atualizarEntrada(caminho, id, campo, valor) {
+      db.ref(`${caminho}/${id}`).update({ [campo]: valor });
     }
 
     function listarTabela(caminho, campo, tbodyId) {
@@ -96,11 +107,29 @@
         snapshot.forEach(child => {
           const val = child.val();
           const nome = val[campo] || "Sem nome";
+          const inputId = `${tbodyId}_${child.key}`;
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${nome}</td><td><button onclick="excluirEntrada('${caminho}', '${child.key}'); listarTabela('${caminho}', '${campo}', '${tbodyId}')">Excluir</button></td>`;
+          tr.innerHTML = `
+            <td><input id="${inputId}" class="edit-input" value="${nome}"></td>
+            <td>
+              <button onclick="atualizarEntrada('${caminho}', '${child.key}', '${campo}', document.getElementById('${inputId}').value);listarTabela('${caminho}', '${campo}', '${tbodyId}')">Salvar</button>
+              <button onclick="excluirEntrada('${caminho}', '${child.key}');listarTabela('${caminho}', '${campo}', '${tbodyId}');initSelects()">Excluir</button>
+            </td>
+          `;
           tbody.appendChild(tr);
         });
       });
+    }
+
+    function adicionarSimples(caminho, inputId) {
+      const valor = document.getElementById(inputId).value;
+      if (!valor) return;
+      const dados = {};
+      dados[caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador"] = valor;
+      db.ref(caminho).push(dados);
+      alert("Adicionado com sucesso!");
+      document.getElementById(inputId).value = "";
+      initSelects();
     }
 
     function initSelects() {
@@ -141,9 +170,11 @@
   </div>
 
   <div class="section">
-    <h2>Filtrar por Publicador</h2>
+    <h2>Filtrar Escalas</h2>
     <input id="filtro" placeholder="Nome do publicador">
-    <button onclick="listarEscalas(document.getElementById('filtro').value)">Filtrar</button>
+    <input id="filtroPonto" placeholder="Nome do ponto">
+    <input id="filtroData" placeholder="Horário de início (hh:mm)">
+    <button onclick="listarEscalas()">Filtrar</button>
   </div>
 
   <div class="section">
