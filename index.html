@@ -40,7 +40,14 @@
         .btn-success { background-color: var(--success-color); }
         .btn-danger { background-color: var(--danger-color); }
         .btn-secondary { background-color: var(--secondary-color); }
-        .btn-sm { padding: 6px 12px; font-size: 0.875rem; }
+
+        /* ✨ ALTERAÇÃO: Botões Salvar/Excluir significativamente menores */
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        
         .filter-container { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
         .filter-container div { flex: 1; min-width: 200px; }
         .filter-container .btn { margin-bottom: 15px; height: 50px; }
@@ -52,6 +59,20 @@
         thead { background-color: var(--light-color); }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         td .btn { margin-right: 5px; }
+        
+        /* ✨ ALTERAÇÃO: Aumenta o campo de conteúdo nas tabelas de manutenção */
+        .maintenance-item table {
+            table-layout: fixed; /* Força o navegador a respeitar as larguras definidas */
+        }
+        .maintenance-item table td:first-child {
+            width: 75%; /* Coluna do input de texto ocupa a maior parte do espaço */
+        }
+        .maintenance-item table td:last-child {
+            width: 25%;
+            text-align: right; /* Alinha os botões à direita da célula */
+        }
+        /* Fim da alteração */
+
         .confirm-btns { display: flex; gap: 5px; align-items: center; }
         .confirm-btns button { width: 30px; height: 30px; border: none; border-radius: 50%; cursor: pointer; color: white;
             font-size: 16px; line-height: 30px; text-align: center; opacity: 0.4; transition: opacity 0.2s, transform 0.2s;
@@ -145,8 +166,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         let escalaEditId = null;
-
-        // --- FUNÇÕES DE GERENCIAMENTO DE ESCALAS (Versão mais recente) ---
 
         function salvarEscala() {
             const inicio = document.getElementById('inicio').value;
@@ -261,8 +280,6 @@
             listarEscalas();
         }
 
-        // --- FUNÇÕES DE MANUTENÇÃO DE TABELAS (Restauradas) ---
-
         function adicionarSimples(caminho, inputId) {
             const input = document.getElementById(inputId);
             const valor = input.value;
@@ -288,11 +305,13 @@
                     const inputId = `${tbodyId}_${child.key}`;
                     const tr = document.createElement("tr");
                     const callback = () => { listarTabela(caminho, campo, tbodyId); initSelects(); };
+                    // Correção aqui: o callback de atualizar também precisa ser uma função
+                    const updateCallback = () => listarTabela(caminho, campo, tbodyId);
                     tr.innerHTML = `
-                        <td><input type="text" id="${inputId}" value="${nome}"></td>
+                        <td><input type="text" id="${inputId}" value="${nome}" style="font-size: 0.9rem; padding: 8px;"></td>
                         <td>
-                            <button class="btn btn-sm btn-success" onclick="atualizarEntrada('${caminho}', '${child.key}', {'${campo}': document.getElementById('${inputId}').value}, () => listarTabela('${caminho}', '${campo}', '${tbodyId}'))">Salvar</button>
-                            <button class="btn btn-sm btn-danger" onclick="excluirEntrada('${caminho}', '${child.key}', callback)">Excluir</button>
+                            <button class="btn btn-sm btn-success" onclick="atualizarEntrada('${caminho}', '${child.key}', {'${campo}': document.getElementById('${inputId}').value}, () => { ${updateCallback.toString()}() })">Salvar</button>
+                            <button class="btn btn-sm btn-danger" onclick="excluirEntrada('${caminho}', '${child.key}', () => { ${callback.toString()}() })">Excluir</button>
                         </td>`;
                     tbody.appendChild(tr);
                 });
@@ -302,10 +321,7 @@
         function atualizarEntrada(caminho, id, dados, callback) {
             db.ref(`${caminho}/${id}`).update(dados).then(callback);
         }
-
-        // --- FUNÇÕES UTILITÁRIAS (Unificadas) ---
         
-        // ✨ TORNADA GENÉRICA PARA ACEITAR UM CALLBACK DE SUCESSO
         function excluirEntrada(caminho, id, callback) {
             if (confirm("Tem certeza que deseja excluir este item?")) {
                 db.ref(`${caminho}/${id}`).remove().then(() => {
@@ -322,7 +338,6 @@
                 select.innerHTML = '<option value="">Selecione</option>';
                 snapshot.forEach(child => {
                     const val = child.val();
-                    // Lógica restaurada para pegar o nome correto de qualquer tabela
                     let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || "Sem nome";
                     const option = new Option(texto, texto);
                     select.add(option);
@@ -340,7 +355,6 @@
         window.onload = () => {
             initSelects();
             listarEscalas();
-            // Chamadas restauradas para listar os dados de manutenção
             listarTabela('Publicadores', 'Publicador', 'tabela-publicadores');
             listarTabela('Equipamentos', 'Equipamentos', 'tabela-equipamentos');
             listarTabela('Pontos', 'Nome do ponto', 'tabela-pontos');
