@@ -27,6 +27,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let mapaPublicadores = {};
+    let mapaEquipamentos = {};
+    let mapaPontos = {};
+
     function adicionarEntrada(caminho, dados) {
       db.ref(caminho).push(dados);
     }
@@ -46,10 +50,21 @@
         select.innerHTML = '<option value="">Selecione</option>';
         snapshot.forEach(child => {
           const val = child.val();
+          let texto = "";
+          if (caminho === 'Publicadores' && val.Publicador) texto = val.Publicador;
+          else if (caminho === 'Equipamentos' && val.Equipamentos) texto = val.Equipamentos;
+          else if (caminho === 'Pontos' && val["Nome do ponto"]) texto = val["Nome do ponto"];
+          else texto = "Sem nome";
+
           const option = document.createElement("option");
-          option.value = child.key;
-          option.textContent = val.nome || val.Publicador || val.Equipamentos || val["Nome do ponto"] || "Sem nome";
+          option.value = texto;
+          option.textContent = texto;
           select.appendChild(option);
+
+          // Guardar os nomes completos em mapas
+          if (caminho === 'Publicadores') mapaPublicadores[texto] = texto;
+          if (caminho === 'Equipamentos') mapaEquipamentos[texto] = texto;
+          if (caminho === 'Pontos') mapaPontos[texto] = texto;
         });
       });
     }
@@ -95,6 +110,7 @@
       adicionarEntrada(caminho, dados);
       alert("Adicionado com sucesso!");
       document.getElementById(inputId).value = "";
+      carregarOpcoes(caminho, caminho === 'Publicadores' ? 'p1' : caminho === 'Equipamentos' ? 'equipamento' : 'ponto');
     }
 
     window.onload = () => {
