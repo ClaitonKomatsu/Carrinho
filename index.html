@@ -12,6 +12,7 @@
     .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 30px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+    .inline { display: inline-block; margin-right: 10px; }
   </style>
   <script>
     const firebaseConfig = {
@@ -27,22 +28,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let mapaPublicadores = {};
-    let mapaEquipamentos = {};
-    let mapaPontos = {};
-
-    function adicionarEntrada(caminho, dados) {
-      db.ref(caminho).push(dados);
-    }
-
-    function atualizarEntrada(caminho, id, dados) {
-      db.ref(`${caminho}/${id}`).set(dados);
-    }
-
-    function excluirEntrada(caminho, id) {
-      db.ref(`${caminho}/${id}`).remove();
-    }
-
     function carregarOpcoes(caminho, selectId) {
       db.ref(caminho).once('value').then(snapshot => {
         const select = document.getElementById(selectId);
@@ -50,21 +35,11 @@
         select.innerHTML = '<option value="">Selecione</option>';
         snapshot.forEach(child => {
           const val = child.val();
-          let texto = "";
-          if (caminho === 'Publicadores' && val.Publicador) texto = val.Publicador;
-          else if (caminho === 'Equipamentos' && val.Equipamentos) texto = val.Equipamentos;
-          else if (caminho === 'Pontos' && val["Nome do ponto"]) texto = val["Nome do ponto"];
-          else texto = "Sem nome";
-
+          let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || val.nome || "Sem nome";
           const option = document.createElement("option");
           option.value = texto;
           option.textContent = texto;
           select.appendChild(option);
-
-          // Guardar os nomes completos em mapas
-          if (caminho === 'Publicadores') mapaPublicadores[texto] = texto;
-          if (caminho === 'Equipamentos') mapaEquipamentos[texto] = texto;
-          if (caminho === 'Pontos') mapaPontos[texto] = texto;
         });
       });
     }
@@ -77,17 +52,18 @@
         inicio: document.getElementById('inicio').value,
         fim: document.getElementById('fim').value
       };
-      adicionarEntrada('escalas', dados);
+      db.ref('escalas').push(dados);
       alert("Escala salva com sucesso!");
       listarEscalas();
     }
 
-    function listarEscalas() {
+    function listarEscalas(filtro = "") {
       const tbody = document.getElementById("lista-escalas");
       tbody.innerHTML = "";
       db.ref('escalas').once('value').then(snapshot => {
         snapshot.forEach(child => {
           const esc = child.val();
+          if (filtro && !esc.publicadores?.some(p => p.includes(filtro))) return;
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${esc.ponto}</td>
@@ -106,18 +82,39 @@
       const valor = document.getElementById(inputId).value;
       if (!valor) return;
       const dados = {};
-      dados[caminho === 'Pontos' ? "Nome do ponto" : caminho.slice(0, -1)] = valor;
-      adicionarEntrada(caminho, dados);
+      dados[caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador"] = valor;
+      db.ref(caminho).push(dados);
       alert("Adicionado com sucesso!");
       document.getElementById(inputId).value = "";
-      carregarOpcoes(caminho, caminho === 'Publicadores' ? 'p1' : caminho === 'Equipamentos' ? 'equipamento' : 'ponto');
+      initSelects();
     }
 
-    window.onload = () => {
+    function listarTabela(caminho, campo, tbodyId) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = "";
+      db.ref(caminho).once('value').then(snapshot => {
+        snapshot.forEach(child => {
+          const val = child.val();
+          const nome = val[campo] || "Sem nome";
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${nome}</td><td><button onclick="excluirEntrada('${caminho}', '${child.key}'); listarTabela('${caminho}', '${campo}', '${tbodyId}')">Excluir</button></td>`;
+          tbody.appendChild(tr);
+        });
+      });
+    }
+
+    function initSelects() {
       ["p1", "p2", "p3"].forEach(id => carregarOpcoes('Publicadores', id));
       carregarOpcoes('Equipamentos', 'equipamento');
       carregarOpcoes('Pontos', 'ponto');
+    }
+
+    window.onload = () => {
+      initSelects();
       listarEscalas();
+      listarTabela('Publicadores', 'Publicador', 'tabela-publicadores');
+      listarTabela('Equipamentos', 'Equipamentos', 'tabela-equipamentos');
+      listarTabela('Pontos', 'Nome do ponto', 'tabela-pontos');
     }
   </script>
 </head>
@@ -144,6 +141,12 @@
   </div>
 
   <div class="section">
+    <h2>Filtrar por Publicador</h2>
+    <input id="filtro" placeholder="Nome do publicador">
+    <button onclick="listarEscalas(document.getElementById('filtro').value)">Filtrar</button>
+  </div>
+
+  <div class="section">
     <h2>Escalas Cadastradas</h2>
     <table>
       <thead>
@@ -161,18 +164,25 @@
   </div>
 
   <div class="section">
-    <h2>Manutenção Tabelas</h2>
-    <label>Novo Publicador:</label>
-    <input id="novoPublicador">
-    <button onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button><br>
-
-    <label>Novo Equipamento:</label>
-    <input id="novoEquipamento">
-    <button onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button><br>
-
-    <label>Novo Ponto:</label>
-    <input id="novoPonto">
-    <button onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button><br>
+    <h2>Manutenção de Tabelas</h2>
+    <div class="inline">
+      <h3>Publicadores</h3>
+      <input id="novoPublicador">
+      <button onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button>
+      <table><tbody id="tabela-publicadores"></tbody></table>
+    </div>
+    <div class="inline">
+      <h3>Equipamentos</h3>
+      <input id="novoEquipamento">
+      <button onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button>
+      <table><tbody id="tabela-equipamentos"></tbody></table>
+    </div>
+    <div class="inline">
+      <h3>Pontos</h3>
+      <input id="novoPonto">
+      <button onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button>
+      <table><tbody id="tabela-pontos"></tbody></table>
+    </div>
   </div>
 </body>
 </html>
