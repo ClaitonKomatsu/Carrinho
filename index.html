@@ -5,8 +5,15 @@
   <title>Gerenciamento de Escala</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    label { display: block; margin-top: 10px; }
+    select, input, button { margin-bottom: 10px; width: 300px; }
+    .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+  </style>
   <script>
-    // Configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
       authDomain: "coletor-92990.firebaseapp.com",
@@ -20,7 +27,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // CRUD para cada entidade
     function adicionarEntrada(caminho, dados) {
       db.ref(caminho).push(dados);
     }
@@ -36,70 +42,121 @@
     function carregarOpcoes(caminho, selectId) {
       db.ref(caminho).once('value').then(snapshot => {
         const select = document.getElementById(selectId);
+        if (!select) return;
         select.innerHTML = '<option value="">Selecione</option>';
         snapshot.forEach(child => {
+          const val = child.val();
           const option = document.createElement("option");
           option.value = child.key;
-          option.textContent = child.val().nome || child.val().Publicador || child.val().Equipamentos || child.val()."Nome do ponto";
+          option.textContent = val.nome || val.Publicador || val.Equipamentos || val["Nome do ponto"] || "Sem nome";
           select.appendChild(option);
         });
       });
     }
 
     function salvarEscala() {
-      const pontoId = document.getElementById('ponto').value;
-      const equipamentoId = document.getElementById('equipamento').value;
-      const p1 = document.getElementById('p1').value;
-      const p2 = document.getElementById('p2').value;
-      const p3 = document.getElementById('p3').value;
-      const inicio = document.getElementById('inicio').value;
-      const fim = document.getElementById('fim').value;
-
       const dados = {
-        ponto: pontoId,
-        equipamento: equipamentoId,
-        publicadores: [p1, p2, p3].filter(p => p),
-        inicio,
-        fim
+        ponto: document.getElementById('ponto').value,
+        equipamento: document.getElementById('equipamento').value,
+        publicadores: ["p1", "p2", "p3"].map(id => document.getElementById(id).value).filter(Boolean),
+        inicio: document.getElementById('inicio').value,
+        fim: document.getElementById('fim').value
       };
-
       adicionarEntrada('escalas', dados);
       alert("Escala salva com sucesso!");
+      listarEscalas();
+    }
+
+    function listarEscalas() {
+      const tbody = document.getElementById("lista-escalas");
+      tbody.innerHTML = "";
+      db.ref('escalas').once('value').then(snapshot => {
+        snapshot.forEach(child => {
+          const esc = child.val();
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${esc.ponto}</td>
+            <td>${esc.equipamento}</td>
+            <td>${(esc.publicadores || []).join(', ')}</td>
+            <td>${esc.inicio}</td>
+            <td>${esc.fim}</td>
+            <td><button onclick="excluirEntrada('escalas','${child.key}');listarEscalas()">Excluir</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      });
+    }
+
+    function adicionarSimples(caminho, inputId) {
+      const valor = document.getElementById(inputId).value;
+      if (!valor) return;
+      const dados = {};
+      dados[caminho === 'Pontos' ? "Nome do ponto" : caminho.slice(0, -1)] = valor;
+      adicionarEntrada(caminho, dados);
+      alert("Adicionado com sucesso!");
+      document.getElementById(inputId).value = "";
     }
 
     window.onload = () => {
-      carregarOpcoes('Publicadores', 'p1');
-      carregarOpcoes('Publicadores', 'p2');
-      carregarOpcoes('Publicadores', 'p3');
+      ["p1", "p2", "p3"].forEach(id => carregarOpcoes('Publicadores', id));
       carregarOpcoes('Equipamentos', 'equipamento');
       carregarOpcoes('Pontos', 'ponto');
+      listarEscalas();
     }
   </script>
 </head>
 <body>
-  <h1>Gerenciar Escalas de Serviço</h1>
+  <h1>Gerenciamento de Escalas</h1>
 
-  <label>Ponto:</label>
-  <select id="ponto"></select><br>
+  <div class="section">
+    <h2>Nova Escala</h2>
+    <label>Ponto:</label>
+    <select id="ponto"></select>
+    <label>Equipamento:</label>
+    <select id="equipamento"></select>
+    <label>Publicador 1:</label>
+    <select id="p1"></select>
+    <label>Publicador 2:</label>
+    <select id="p2"></select>
+    <label>Publicador 3:</label>
+    <select id="p3"></select>
+    <label>Início:</label>
+    <input type="time" id="inicio">
+    <label>Fim:</label>
+    <input type="time" id="fim"><br>
+    <button onclick="salvarEscala()">Salvar Escala</button>
+  </div>
 
-  <label>Equipamento:</label>
-  <select id="equipamento"></select><br>
+  <div class="section">
+    <h2>Escalas Cadastradas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Ponto</th>
+          <th>Equipamento</th>
+          <th>Publicadores</th>
+          <th>Início</th>
+          <th>Fim</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="lista-escalas"></tbody>
+    </table>
+  </div>
 
-  <label>Publicador 1:</label>
-  <select id="p1"></select><br>
+  <div class="section">
+    <h2>Manutenção Tabelas</h2>
+    <label>Novo Publicador:</label>
+    <input id="novoPublicador">
+    <button onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button><br>
 
-  <label>Publicador 2:</label>
-  <select id="p2"></select><br>
+    <label>Novo Equipamento:</label>
+    <input id="novoEquipamento">
+    <button onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button><br>
 
-  <label>Publicador 3:</label>
-  <select id="p3"></select><br>
-
-  <label>Início:</label>
-  <input type="time" id="inicio"><br>
-
-  <label>Fim:</label>
-  <input type="time" id="fim"><br><br>
-
-  <button onclick="salvarEscala()">Salvar Escala</button>
+    <label>Novo Ponto:</label>
+    <input id="novoPonto">
+    <button onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button><br>
+  </div>
 </body>
 </html>
