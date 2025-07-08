@@ -1,548 +1,105 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciador de Escalas</title>
-    <!-- Tailwind CSS para um design moderno e responsivo -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Biblioteca de ícones -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Fontes do Google -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* Estilo base para a página */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* cinza claro */
-        }
-        /* Estilo para abas ativas */
-        .tab-active {
-            border-bottom-color: #3b82f6; /* azul */
-            color: #3b82f6;
-            font-weight: 600;
-        }
-        /* Esconde as seções de conteúdo por padrão */
-        .tab-content {
-            display: none;
-        }
-        /* Mostra a seção de conteúdo ativa */
-        .tab-content.active {
-            display: block;
-        }
-        /* Estilos para o modal */
-        .modal-backdrop {
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        /* Custom scrollbar for multiselect */
-        .multiselect-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        .multiselect-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        .multiselect-container::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        .multiselect-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Gerenciamento de Escala</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
+      authDomain: "coletor-92990.firebaseapp.com",
+      databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com",
+      projectId: "coletor-92990",
+      storageBucket: "coletor-92990.firebasestorage.app",
+      messagingSenderId: "591970302569",
+      appId: "1:591970302569:web:edcf8e8c6f55729c9340f8",
+      measurementId: "G-QJQNMDCHW5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // CRUD para cada entidade
+    function adicionarEntrada(caminho, dados) {
+      db.ref(caminho).push(dados);
+    }
+
+    function atualizarEntrada(caminho, id, dados) {
+      db.ref(`${caminho}/${id}`).set(dados);
+    }
+
+    function excluirEntrada(caminho, id) {
+      db.ref(`${caminho}/${id}`).remove();
+    }
+
+    function carregarOpcoes(caminho, selectId) {
+      db.ref(caminho).once('value').then(snapshot => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">Selecione</option>';
+        snapshot.forEach(child => {
+          const option = document.createElement("option");
+          option.value = child.key;
+          option.textContent = child.val().nome || child.val().Publicador || child.val().Equipamentos || child.val()."Nome do ponto";
+          select.appendChild(option);
+        });
+      });
+    }
+
+    function salvarEscala() {
+      const pontoId = document.getElementById('ponto').value;
+      const equipamentoId = document.getElementById('equipamento').value;
+      const p1 = document.getElementById('p1').value;
+      const p2 = document.getElementById('p2').value;
+      const p3 = document.getElementById('p3').value;
+      const inicio = document.getElementById('inicio').value;
+      const fim = document.getElementById('fim').value;
+
+      const dados = {
+        ponto: pontoId,
+        equipamento: equipamentoId,
+        publicadores: [p1, p2, p3].filter(p => p),
+        inicio,
+        fim
+      };
+
+      adicionarEntrada('escalas', dados);
+      alert("Escala salva com sucesso!");
+    }
+
+    window.onload = () => {
+      carregarOpcoes('Publicadores', 'p1');
+      carregarOpcoes('Publicadores', 'p2');
+      carregarOpcoes('Publicadores', 'p3');
+      carregarOpcoes('Equipamentos', 'equipamento');
+      carregarOpcoes('Pontos', 'ponto');
+    }
+  </script>
 </head>
-<body class="p-4 md:p-8">
+<body>
+  <h1>Gerenciar Escalas de Serviço</h1>
 
-    <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Gerenciador de Escalas de Trabalho</h1>
-            <p class="text-gray-500 mt-1">Organize as equipes, pontos e horários de forma integrada.</p>
-        </header>
+  <label>Ponto:</label>
+  <select id="ponto"></select><br>
 
-        <!-- Abas de Navegação -->
-        <div class="border-b border-gray-200 mb-6">
-            <nav class="flex space-x-4 -mb-px" aria-label="Tabs">
-                <button onclick="changeTab('escala')" class="tab tab-active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    <i class="fas fa-calendar-alt mr-2"></i>Escala
-                </button>
-                <button onclick="changeTab('publicadores')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                    <i class="fas fa-users mr-2"></i>Publicadores
-                </button>
-                <button onclick="changeTab('equipamentos')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                    <i class="fas fa-briefcase mr-2"></i>Equipamentos
-                </button>
-                <button onclick="changeTab('pontos')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                    <i class="fas fa-map-marker-alt mr-2"></i>Pontos
-                </button>
-            </nav>
-        </div>
+  <label>Equipamento:</label>
+  <select id="equipamento"></select><br>
 
-        <!-- Conteúdo das Abas -->
-        <main>
-            <!-- Seção: Escala -->
-            <div id="escala" class="tab-content active">
-                <div class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
-                    <h2 class="text-2xl font-semibold text-gray-700">Agenda do Dia</h2>
-                    <div class="flex items-center gap-4">
-                        <label for="date-picker" class="font-medium text-gray-600">Selecione a Data:</label>
-                        <input type="date" id="date-picker" class="border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <button onclick="openCreateEscalaModal()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">
-                            <i class="fas fa-plus mr-2"></i>Agendar Horário
-                        </button>
-                    </div>
-                </div>
-                <div id="schedule-loading" class="text-center py-8">
-                    <i class="fas fa-spinner fa-spin fa-3x text-blue-500"></i>
-                    <p class="mt-4 text-gray-600">Carregando...</p>
-                </div>
-                <div id="schedule-container" class="overflow-x-auto hidden">
-                    <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
-                        <thead class="bg-gray-50" id="schedule-header">
-                            <!-- Cabeçalho da tabela de escala será gerado dinamicamente -->
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200" id="schedule-body">
-                            <!-- Corpo da tabela de escala será gerado dinamicamente -->
-                        </tbody>
-                    </table>
-                </div>
-                 <div id="schedule-empty" class="text-center py-8 hidden">
-                    <i class="fas fa-calendar-plus fa-3x text-gray-400"></i>
-                    <p class="mt-4 text-gray-600">Nenhum ponto cadastrado ou nenhuma escala para hoje. Adicione pontos ou clique em "Agendar Horário".</p>
-                </div>
-            </div>
+  <label>Publicador 1:</label>
+  <select id="p1"></select><br>
 
-            <!-- Seção: Publicadores -->
-            <div id="publicadores" class="tab-content">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-700">Gerenciar Publicadores</h2>
-                    <button onclick="openModal('publicadores')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">
-                        <i class="fas fa-plus mr-2"></i>Adicionar
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="publicadores-table" class="bg-white divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </div>
+  <label>Publicador 2:</label>
+  <select id="p2"></select><br>
 
-            <!-- Seção: Equipamentos -->
-            <div id="equipamentos" class="tab-content">
-                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-700">Gerenciar Equipamentos</h2>
-                    <button onclick="openModal('equipamentos')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">
-                        <i class="fas fa-plus mr-2"></i>Adicionar
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="equipamentos-table" class="bg-white divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </div>
+  <label>Publicador 3:</label>
+  <select id="p3"></select><br>
 
-            <!-- Seção: Pontos -->
-            <div id="pontos" class="tab-content">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-700">Gerenciar Pontos</h2>
-                    <button onclick="openModal('pontos')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">
-                        <i class="fas fa-plus mr-2"></i>Adicionar
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome/Local</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pontos-table" class="bg-white divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
-    </div>
+  <label>Início:</label>
+  <input type="time" id="inicio"><br>
 
-    <!-- Modais -->
+  <label>Fim:</label>
+  <input type="time" id="fim"><br><br>
 
-    <!-- Modal CRUD Genérico -->
-    <div id="crud-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="crud-modal-title"></h3>
-            <form id="crud-form">
-                <input type="hidden" id="crud-id">
-                <input type="hidden" id="crud-collection">
-                <div id="crud-fields"></div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('crud-modal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancelar</button>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Modal Escala -->
-    <div id="escala-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="escala-modal-title"></h3>
-            <form id="escala-form" class="space-y-4">
-                <input type="hidden" id="escala-date">
-                <input type="hidden" id="escala-time-hidden">
-                <input type="hidden" id="escala-ponto-id-hidden">
-
-                <div id="escala-create-fields" class="space-y-4">
-                     <div>
-                        <label for="escala-time-select" class="block text-sm font-medium text-gray-700">Horário</label>
-                        <select id="escala-time-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required></select>
-                    </div>
-                    <div>
-                        <label for="escala-ponto-select" class="block text-sm font-medium text-gray-700">Ponto</label>
-                        <select id="escala-ponto-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required></select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Publicadores (máx. 3)</label>
-                    <div id="escala-publicadores-list" class="mt-2 border border-gray-300 rounded-md max-h-40 overflow-y-auto p-2 space-y-2 multiselect-container"></div>
-                </div>
-                <div>
-                    <label for="escala-equipamento-select" class="block text-sm font-medium text-gray-700">Equipamento</label>
-                    <select id="escala-equipamento-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></select>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('escala-modal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancelar</button>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
-            authDomain: "coletor-92990.firebaseapp.com",
-            projectId: "coletor-92990",
-            storageBucket: "coletor-92990.appspot.com",
-            messagingSenderId: "591970302569",
-            appId: "1:591970302569:web:edcf8e8c6f55729c9340f8",
-            measurementId: "G-QJQNMDCHW5"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        let publicadoresData = {};
-        let equipamentosData = {};
-        let pontosData = [];
-
-        const datePicker = document.getElementById('date-picker');
-
-        // --- Funções de UI ---
-        window.changeTab = (tabName) => {
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('tab-active'));
-            document.getElementById(tabName).classList.add('active');
-            event.currentTarget.classList.add('tab-active');
-        };
-
-        window.closeModal = (modalId) => {
-            document.getElementById(modalId).style.display = 'none';
-        };
-
-        // --- Funções de Renderização ---
-        const renderTable = (collectionName, data) => {
-            const tableBody = document.getElementById(`${collectionName}-table`);
-            if (!tableBody) return;
-            tableBody.innerHTML = '';
-            data.forEach(item => {
-                const row = document.createElement('tr');
-                let cells = '';
-                if (collectionName === 'publicadores' || collectionName === 'equipamentos') {
-                    cells = `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${item.nome}</td>`;
-                } else if (collectionName === 'pontos') {
-                    cells = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.numero}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${item.nome}</td>`;
-                }
-                row.innerHTML = `${cells}
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="openEditModal('${collectionName}', '${item.id}')" class="text-blue-600 hover:text-blue-900 mr-4"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteItem('${collectionName}', '${item.id}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
-                    </td>`;
-                tableBody.appendChild(row);
-            });
-        };
-
-        const renderSchedule = async () => {
-            const loadingDiv = document.getElementById('schedule-loading');
-            const containerDiv = document.getElementById('schedule-container');
-            const emptyDiv = document.getElementById('schedule-empty');
-            
-            loadingDiv.style.display = 'block';
-            containerDiv.style.display = 'none';
-            emptyDiv.style.display = 'none';
-
-            if (pontosData.length === 0) {
-                loadingDiv.style.display = 'none';
-                emptyDiv.style.display = 'block';
-                return;
-            }
-
-            const header = document.getElementById('schedule-header');
-            const body = document.getElementById('schedule-body');
-            header.innerHTML = `<tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Horário</th>${pontosData.map(p => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${p.numero} - ${p.nome}</th>`).join('')}</tr>`;
-            
-            const selectedDate = datePicker.value;
-            const escalaDocRef = doc(db, 'escalas', selectedDate);
-            const escalaDocSnap = await getDoc(escalaDocRef);
-            const escalaData = escalaDocSnap.exists() ? escalaDocSnap.data() : {};
-
-            let tableBodyHtml = '';
-            for (let hour = 7; hour <= 20; hour++) {
-                const time = `${hour.toString().padStart(2, '0')}:00`;
-                tableBodyHtml += `<tr><td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 bg-gray-50">${time}</td>`;
-                pontosData.forEach(ponto => {
-                    const slotData = escalaData[time]?.[ponto.id] || {};
-                    const publicadoresNomes = (slotData.publicadores || []).map(id => publicadoresData[id] || '?').join(', ');
-                    const equipamentoNome = equipamentosData[slotData.equipamento] || '';
-                    tableBodyHtml += `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 cursor-pointer hover:bg-blue-50 transition" onclick="openEditEscalaModal('${time}', '${ponto.id}', '${ponto.nome}')">
-                            <div class="flex flex-col">
-                                <span class="font-medium text-gray-800">${publicadoresNomes || '&nbsp;'}</span>
-                                <span class="text-xs text-blue-600">${equipamentoNome}</span>
-                            </div>
-                        </td>`;
-                });
-                tableBodyHtml += '</tr>';
-            }
-            body.innerHTML = tableBodyHtml;
-            
-            loadingDiv.style.display = 'none';
-            containerDiv.style.display = 'block';
-        };
-
-        // --- Funções de CRUD ---
-        window.openModal = (collectionName) => {
-            const modal = document.getElementById('crud-modal');
-            const form = document.getElementById('crud-form');
-            form.reset();
-            document.getElementById('crud-id').value = '';
-            document.getElementById('crud-collection').value = collectionName;
-            
-            const fieldsContainer = document.getElementById('crud-fields');
-            let title = 'Adicionar';
-            if (collectionName === 'publicadores') {
-                title += ' Publicador';
-                fieldsContainer.innerHTML = `<div><label for="crud-nome" class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="crud-nome" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>`;
-            } else if (collectionName === 'equipamentos') {
-                title += ' Equipamento';
-                fieldsContainer.innerHTML = `<div><label for="crud-nome" class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="crud-nome" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>`;
-            } else if (collectionName === 'pontos') {
-                title += ' Ponto';
-                fieldsContainer.innerHTML = `<div class="space-y-4">
-                    <div><label for="crud-numero" class="block text-sm font-medium text-gray-700">Número</label><input type="number" id="crud-numero" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
-                    <div><label for="crud-nome" class="block text-sm font-medium text-gray-700">Nome/Local</label><input type="text" id="crud-nome" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
-                </div>`;
-            }
-            document.getElementById('crud-modal-title').innerText = title;
-            modal.style.display = 'flex';
-        };
-
-        window.openEditModal = async (collectionName, id) => {
-            window.openModal(collectionName); // Reutiliza a função de abrir o modal
-            const docSnap = await getDoc(doc(db, collectionName, id));
-            if (!docSnap.exists()) return;
-            const data = docSnap.data();
-            
-            document.getElementById('crud-modal-title').innerText = `Editar ${collectionName.slice(0, -1)}`;
-            document.getElementById('crud-id').value = id;
-            document.getElementById('crud-nome').value = data.nome;
-            if (collectionName === 'pontos') {
-                document.getElementById('crud-numero').value = data.numero;
-            }
-        };
-
-        document.getElementById('crud-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('crud-id').value;
-            const collectionName = document.getElementById('crud-collection').value;
-            let data = { nome: document.getElementById('crud-nome').value };
-            if (collectionName === 'pontos') {
-                data.numero = parseInt(document.getElementById('crud-numero').value);
-            }
-            try {
-                if (id) {
-                    await updateDoc(doc(db, collectionName, id), data);
-                } else {
-                    await addDoc(collection(db, collectionName), data);
-                }
-                closeModal('crud-modal');
-            } catch (error) {
-                console.error("Erro ao salvar:", error);
-                alert(`Ocorreu um erro ao salvar: ${error.message}\n\nVerifique as regras de segurança do seu Firestore.`);
-            }
-        });
-
-        window.deleteItem = async (collectionName, id) => {
-            if (confirm(`Tem certeza que deseja excluir este item?`)) {
-                try {
-                    await deleteDoc(doc(db, collectionName, id));
-                } catch (error) {
-                    console.error("Erro ao deletar:", error);
-                    alert(`Ocorreu um erro ao deletar: ${error.message}\n\nVerifique as regras de segurança do seu Firestore.`);
-                }
-            }
-        };
-
-        // --- Funções da Escala ---
-        window.openCreateEscalaModal = () => {
-            const modal = document.getElementById('escala-modal');
-            document.getElementById('escala-form').reset();
-            document.getElementById('escala-modal-title').innerText = 'Agendar Novo Horário';
-            document.getElementById('escala-create-fields').style.display = 'block';
-            document.getElementById('escala-date').value = datePicker.value;
-            modal.style.display = 'flex';
-        };
-
-        window.openEditEscalaModal = async (time, pontoId, pontoNome) => {
-            const modal = document.getElementById('escala-modal');
-            document.getElementById('escala-form').reset();
-            const date = datePicker.value;
-            
-            const docSnap = await getDoc(doc(db, 'escalas', date));
-            const slotData = docSnap.exists() ? docSnap.data()[time]?.[pontoId] || {} : {};
-
-            document.getElementById('escala-modal-title').innerText = `Editar Escala: ${pontoNome} às ${time}`;
-            document.getElementById('escala-create-fields').style.display = 'none';
-            document.getElementById('escala-date').value = date;
-            document.getElementById('escala-time-hidden').value = time;
-            document.getElementById('escala-ponto-id-hidden').value = pontoId;
-
-            (slotData.publicadores || []).forEach(id => {
-                const checkbox = document.querySelector(`#escala-publicadores-list input[value="${id}"]`);
-                if(checkbox) checkbox.checked = true;
-            });
-            document.getElementById('escala-equipamento-select').value = slotData.equipamento || '';
-            
-            modal.style.display = 'flex';
-        };
-        
-        document.getElementById('escala-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const date = document.getElementById('escala-date').value;
-            const isCreating = document.getElementById('escala-create-fields').style.display === 'block';
-
-            const time = isCreating ? document.getElementById('escala-time-select').value : document.getElementById('escala-time-hidden').value;
-            const pontoId = isCreating ? document.getElementById('escala-ponto-select').value : document.getElementById('escala-ponto-id-hidden').value;
-
-            if (!time || !pontoId) {
-                alert('Por favor, preencha todos os campos.');
-                return;
-            }
-
-            const selectedPublicadores = Array.from(document.querySelectorAll('#escala-publicadores-list input:checked')).map(cb => cb.value);
-            const selectedEquipamento = document.getElementById('escala-equipamento-select').value;
-            
-            const dataToSave = { publicadores: selectedPublicadores, equipamento: selectedEquipamento };
-            const escalaDocRef = doc(db, 'escalas', date);
-            const fieldPath = `${time}.${pontoId}`;
-
-            try {
-                const docSnap = await getDoc(escalaDocRef);
-                if (docSnap.exists()) {
-                    await updateDoc(escalaDocRef, { [fieldPath]: dataToSave });
-                } else {
-                    await setDoc(escalaDocRef, { [time]: { [pontoId]: dataToSave } });
-                }
-                closeModal('escala-modal');
-            } catch(error) {
-                console.error("Erro ao salvar escala:", error);
-                alert(`Ocorreu um erro ao salvar a escala: ${error.message}\n\nVerifique as regras de segurança do seu Firestore.`);
-            }
-        });
-
-        // --- Listeners e Inicialização ---
-        datePicker.valueAsDate = new Date();
-        datePicker.addEventListener('change', renderSchedule);
-        
-        document.getElementById('escala-publicadores-list').addEventListener('change', (event) => {
-            if (event.target.type === 'checkbox' && document.querySelectorAll('#escala-publicadores-list input:checked').length > 3) {
-                event.target.checked = false;
-                alert('Você pode selecionar no máximo 3 publicadores.');
-            }
-        });
-
-        onSnapshot(collection(db, 'publicadores'), (snapshot) => {
-            const list = document.getElementById('escala-publicadores-list');
-            list.innerHTML = '';
-            publicadoresData = {};
-            const allData = [];
-            snapshot.docs.forEach(doc => {
-                const data = { id: doc.id, ...doc.data() };
-                allData.push(data);
-                publicadoresData[doc.id] = data.nome;
-                list.innerHTML += `<label class="flex items-center space-x-3"><input type="checkbox" value="${doc.id}" class="rounded border-gray-300 text-blue-600 shadow-sm"><span class="text-gray-700">${data.nome}</span></label>`;
-            });
-            renderTable('publicadores', allData);
-        });
-
-        onSnapshot(collection(db, 'equipamentos'), (snapshot) => {
-            const select = document.getElementById('escala-equipamento-select');
-            select.innerHTML = '<option value="">Nenhum</option>';
-            equipamentosData = {};
-            const allData = [];
-            snapshot.docs.forEach(doc => {
-                const data = { id: doc.id, ...doc.data() };
-                allData.push(data);
-                equipamentosData[doc.id] = data.nome;
-                select.innerHTML += `<option value="${doc.id}">${data.nome}</option>`;
-            });
-            renderTable('equipamentos', allData);
-        });
-
-        onSnapshot(collection(db, 'pontos'), (snapshot) => {
-            const select = document.getElementById('escala-ponto-select');
-            select.innerHTML = '<option value="">Selecione um ponto</option>';
-            pontosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.numero - b.numero);
-            pontosData.forEach(ponto => {
-                select.innerHTML += `<option value="${ponto.id}">${ponto.numero} - ${ponto.nome}</option>`;
-            });
-            renderTable('pontos', pontosData);
-            renderSchedule();
-        });
-        
-        onSnapshot(collection(db, "escalas"), (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.doc.id === datePicker.value) renderSchedule();
-            });
-        });
-
-        // Preenche o seletor de horário
-        const timeSelect = document.getElementById('escala-time-select');
-        for (let hour = 7; hour <= 20; hour++) {
-            const time = `${hour.toString().padStart(2, '0')}:00`;
-            timeSelect.innerHTML += `<option value="${time}">${time}</option>`;
-        }
-
-    </script>
+  <button onclick="salvarEscala()">Salvar Escala</button>
 </body>
 </html>
