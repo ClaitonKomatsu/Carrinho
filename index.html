@@ -53,29 +53,24 @@
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         .maintenance-item table { table-layout: fixed; }
         .maintenance-item table td:first-child { width: 75%; }
-        .action-cell { width: 25%; text-align: center; }
-        .action-cell .btn { display: block; width: 100%; margin-bottom: 3px; }
-        .action-cell .btn:last-child { margin-bottom: 0; }
+        .maintenance-item .action-cell { width: 25%; text-align: center; }
+        .maintenance-item .action-cell .btn { display: block; width: 100%; margin-bottom: 3px; }
+        .maintenance-item .action-cell .btn:last-child { margin-bottom: 0; }
+        
+        /* ✨ 1. Largura da coluna Ações da tabela principal reduzida */
+        .th-acoes, .escalas-action-cell {
+            width: 8% !important; /* Força a coluna a ser bem estreita */
+            text-align: center;
+        }
+        .escalas-action-cell .btn { font-size: 1rem; padding: 2px 5px; } /* Ajuste fino nos botões de ícone */
 
-        /* ✨ 2. Botões de status menores e com mais contraste entre ativo/inativo */
         .confirm-btns { display: flex; gap: 5px; align-items: center; }
         .confirm-btns button {
-            width: 22px;
-            height: 22px;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            color: white;
-            font-size: 12px;
-            line-height: 22px; /* Mesmo valor da altura para centralizar o ícone */
-            text-align: center;
-            opacity: 0.25; /* Deixando os inativos ainda mais claros */
+            width: 22px; height: 22px; border: none; border-radius: 50%; cursor: pointer; color: white;
+            font-size: 12px; line-height: 22px; text-align: center; opacity: 0.25; 
             transition: opacity 0.2s, transform 0.2s;
         }
-        .confirm-btns button.active {
-            opacity: 1;
-            transform: scale(1.1);
-        }
+        .confirm-btns button.active { opacity: 1; transform: scale(1.1); }
         .status-container > div { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
         .verde { background: var(--success-color); }
         .amarelo { background: var(--warning-color); }
@@ -96,13 +91,10 @@
                 <label for="p1">Publicador 1:</label> <select id="p1"></select>
                 <label for="p2">Publicador 2:</label> <select id="p2"></select>
                 <label for="p3">Publicador 3:</label> <select id="p3"></select>
-                
                 <label for="inicio">Início:</label> 
                 <input type="datetime-local" id="inicio" step="1800" onchange="handleInicioChange(event)">
-                
                 <label for="fim">Fim:</label> 
                 <input type="datetime-local" id="fim" step="1800" onchange="snapTo30Min(event)">
-
                 <div class="form-actions">
                     <button type="button" id="saveButton" class="btn btn-primary" onclick="salvarEscala()">Salvar Escala</button>
                     <button type="button" id="cancelButton" class="btn btn-secondary" onclick="cancelarEdicao()" style="display: none;">Cancelar</button>
@@ -126,7 +118,8 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Ponto</th><th>Equipamento</th><th>Publicadores / Status</th><th>Início</th><th>Fim</th><th>Ações</th>
+                            <th>Ponto</th><th>Equipamento</th><th>Publicadores / Status</th><th>Início</th><th>Fim</th>
+                            <th class="th-acoes">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="lista-escalas"></tbody>
@@ -274,13 +267,12 @@
                             <button class="vermelho ${p.status === 'vermelho' ? 'active' : ''}" title="Não irá" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'vermelho')">✖</button>
                         </span></div>`).join('');
                     
-                    // ✨ 1. Botões de ação da tabela de escalas com ÍCONES para economizar espaço
                     row.innerHTML = `
                         <td>${esc.ponto}</td><td>${esc.equipamento}</td>
                         <td><div class="status-container">${confirmacoes}</div></td>
                         <td>${new Date(esc.inicio).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
                         <td>${new Date(esc.fim).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
-                        <td class="action-cell">
+                        <td class="escalas-action-cell">
                             <button class="btn btn-sm btn-secondary" title="Alterar" onclick="iniciarEdicao('${esc.key}')">✏️</button>
                             <button class="btn btn-sm btn-danger" title="Excluir" onclick="excluirEntrada('escalas','${esc.key}', listarEscalas)">🗑️</button>
                         </td>`;
@@ -321,10 +313,17 @@
             });
         }
 
+        // ✨ 2. BUG CORRIGIDO: Função agora limpa os filtros para garantir que a lista seja sempre atualizada corretamente.
         function cancelarEdicao() {
             escalaEditId = null;
             document.getElementById('form-escala').reset();
-            document.getElementById('fim').min = '';
+            document.getElementById('fim').min = ''; 
+            
+            // Limpa os campos de filtro
+            document.getElementById('filtro').value = '';
+            document.getElementById('filtroPonto').value = '';
+            document.getElementById('filtroData').value = '';
+
             document.getElementById('form-title').textContent = "Nova Escala";
             document.getElementById('saveButton').textContent = "Salvar Escala";
             document.getElementById('cancelButton').style.display = 'none';
@@ -351,7 +350,7 @@
                     const updateCallback = () => listarTabela(caminho, campo, tbodyId);
                     tr.innerHTML = `
                         <td><input type="text" id="${inputId}" value="${item.text}" style="font-size: 0.9rem; padding: 4px;"></td>
-                        <td class="action-cell">
+                        <td class="maintenance-item action-cell">
                             <button class="btn btn-sm btn-success" onclick="atualizarEntrada('${caminho}', '${item.key}', {'${campo}': document.getElementById('${inputId}').value}, () => { ${updateCallback.toString()}() })">Salvar</button>
                             <button class="btn btn-sm btn-danger" onclick="excluirEntrada('${caminho}', '${item.key}', () => { ${callback.toString()}() })">Excluir</button>
                         </td>`;
@@ -387,7 +386,6 @@
             }
         }
         
-        // Esta função já garante os intervalos de 30 min e zera os segundos. Nenhuma alteração necessária aqui.
         function snapTo30Min(event) {
             const input = event.target;
             if (!input.value) return;
