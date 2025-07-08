@@ -13,388 +13,89 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <style>
-        /* CSS Variables for Easy Theming */
         :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --light-color: #f8f9fa;
-            --dark-color: #343a40;
-            --text-color: #333;
-            --border-color: #dee2e6;
-            --shadow: 0 4px 8px rgba(0,0,0,0.1);
-            --border-radius: 8px;
+            --primary-color: #007bff; --secondary-color: #6c757d; --success-color: #28a745;
+            --warning-color: #ffc107; --danger-color: #dc3545; --light-color: #f8f9fa;
+            --dark-color: #343a40; --text-color: #333; --border-color: #dee2e6;
+            --shadow: 0 4px 8px rgba(0,0,0,0.1); --border-radius: 8px;
         }
-
-        /* General Styles */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Roboto', Arial, sans-serif;
-            background-color: #f4f7f9;
-            color: var(--text-color);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 0 20px;
-        }
-
-        h1, h2, h3 {
-            margin-bottom: 1rem;
-            color: var(--dark-color);
-            font-weight: 500;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 2rem;
-            font-weight: 700;
-        }
-
-        /* Card/Section Styling */
-        .section {
-            background: #fff;
-            padding: 25px;
-            margin-bottom: 30px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-        }
-
-        /* Form Elements */
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f4f7f9; color: var(--text-color); line-height: 1.6; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        h1, h2, h3 { margin-bottom: 1rem; color: var(--dark-color); font-weight: 500; }
+        h1 { text-align: center; margin-bottom: 2rem; font-weight: 700; }
+        .section { background: #fff; padding: 25px; margin-bottom: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); }
+        label { display: block; margin-bottom: 5px; font-weight: 500; }
         select, input[type="text"], input[type="date"], input[type="datetime-local"] {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color);
+            border-radius: var(--border-radius); font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s;
         }
-
-        select:focus, input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        select:focus, input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); }
+        .btn { display: inline-block; padding: 12px 20px; font-size: 1rem; font-weight: 500; text-align: center;
+            border-radius: var(--border-radius); border: none; cursor: pointer; transition: all 0.2s; color: #fff;
         }
-
-        /* Button Styles */
-        .btn {
-            display: inline-block;
-            padding: 12px 20px;
-            font-size: 1rem;
-            font-weight: 500;
-            text-align: center;
-            border-radius: var(--border-radius);
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            color: #fff;
-        }
-        
-        .btn:hover {
-            opacity: 0.9;
-        }
-
-        .btn:active {
-            transform: translateY(1px);
-        }
-        
+        .btn:hover { opacity: 0.9; }
+        .btn:active { transform: translateY(1px); }
         .btn-primary { background-color: var(--primary-color); }
         .btn-success { background-color: var(--success-color); }
         .btn-danger { background-color: var(--danger-color); }
         .btn-secondary { background-color: var(--secondary-color); }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 0.875rem;
-        }
-
-        /* Layout Specifics */
-        .filter-container {
-            display: flex;
-            gap: 15px;
-            align-items: flex-end;
-        }
-        
-        .filter-container input {
-            flex: 1;
-        }
-
-        .filter-container .btn {
-            margin-bottom: 15px; /* Aligns with other inputs */
-            height: 48px;
-        }
-        
-        .maintenance-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-        }
-
-        /* Table Styling */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            text-align: left;
-            vertical-align: middle;
-        }
-
-        thead {
-            background-color: var(--light-color);
-        }
-        
-        tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        
+        .btn-sm { padding: 6px 12px; font-size: 0.875rem; }
+        .filter-container { display: flex; gap: 15px; align-items: flex-end; }
+        .filter-container input { flex: 1; }
+        .filter-container .btn { margin-bottom: 15px; height: 48px; }
+        .maintenance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; vertical-align: middle; }
+        thead { background-color: var(--light-color); }
+        tbody tr:nth-child(even) { background-color: #f9f9f9; }
         td .btn { margin-right: 5px; }
 
-        /* Confirmation Status Buttons */
-        .confirm-btns {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-        }
-
+        /* ✨ ESTILOS PARA BOTÕES DE STATUS */
+        .confirm-btns { display: flex; gap: 5px; align-items: center; }
         .confirm-btns button {
-            width: 30px;
-            height: 30px;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            color: white;
-            font-size: 16px;
-            line-height: 30px;
-            text-align: center;
+            width: 30px; height: 30px; border: none; border-radius: 50%; cursor: pointer; color: white;
+            font-size: 16px; line-height: 30px; text-align: center;
+            opacity: 0.4; /* Cor fraca por padrão */
+            transition: opacity 0.2s, transform 0.2s;
         }
-        
-        .status-container > div {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 4px 0;
+        .confirm-btns button.active {
+            opacity: 1; /* Cor forte quando ativo */
+            transform: scale(1.1);
         }
-
+        .status-container > div { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
         .verde { background: var(--success-color); }
         .amarelo { background: var(--warning-color); }
         .vermelho { background: var(--danger-color); }
-        
-        /* Responsive Design */
+
+        .form-actions { display: flex; gap: 10px; }
+
         @media (max-width: 768px) {
-            .filter-container {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .filter-container .btn {
-                width: 100%;
-                margin-bottom: 0;
-            }
+            .filter-container { flex-direction: column; align-items: stretch; }
+            .filter-container .btn { width: 100%; margin-bottom: 0; }
         }
-
     </style>
-    <script>
-        // SEU CÓDIGO JAVASCRIPT ORIGINAL (com uma pequena alteração)
-        const firebaseConfig = {
-            apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
-            authDomain: "coletor-92990.firebaseapp.com",
-            databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com",
-            projectId: "coletor-92990",
-            storageBucket: "coletor-92990.firebasestorage.app",
-            messagingSenderId: "591970302569",
-            appId: "1:591970302569:web:edcf8e8c6f55729c9340f8",
-            measurementId: "G-QJQNMDCHW5"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        function carregarOpcoes(caminho, selectId) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            db.ref(caminho).once('value').then(snapshot => {
-                select.innerHTML = '<option value="">Selecione</option>';
-                snapshot.forEach(child => {
-                    const val = child.val();
-                    let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || val.nome || "Sem nome";
-                    const option = document.createElement("option");
-                    option.value = texto;
-                    option.textContent = texto;
-                    select.appendChild(option);
-                });
-            });
-        }
-
-        function salvarEscala() {
-            const inicio = document.getElementById('inicio').value;
-            const fim = document.getElementById('fim').value;
-            if (fim <= inicio) {
-                alert("O horário FIM deve ser maior que o horário INÍCIO.");
-                return;
-            }
-            const dados = {
-                ponto: document.getElementById('ponto').value,
-                equipamento: document.getElementById('equipamento').value,
-                publicadores: ["p1", "p2", "p3"].map(id => document.getElementById(id).value).filter(Boolean),
-                inicio,
-                fim
-            };
-            db.ref('escalas').push(dados).then(() => {
-                listarEscalas();
-                alert("Escala salva com sucesso!");
-            });
-        }
-
-        function listarEscalas() {
-            const filtroNome = (document.getElementById("filtro")?.value || "").toLowerCase();
-            const filtroPonto = (document.getElementById("filtroPonto")?.value || "").toLowerCase();
-            const filtroData = document.getElementById("filtroData")?.value || "";
-
-            const tbody = document.getElementById("lista-escalas");
-            tbody.innerHTML = "";
-            db.ref('escalas').once('value').then(snapshot => {
-                snapshot.forEach(child => {
-                    const esc = child.val();
-                    if (filtroNome && !esc.publicadores?.some(p => p.toLowerCase().includes(filtroNome))) return;
-                    if (filtroPonto && !(esc.ponto || "").toLowerCase().includes(filtroPonto)) return;
-                    if (filtroData && !(new Date(esc.inicio || '').toISOString().slice(0, 10) === filtroData)) return;
-
-                    const row = document.createElement("tr");
-                    
-                    // ✨ ALTERAÇÃO: Adicionado ícones e nova estrutura para os botões de confirmação
-                    const confirmacoes = (esc.publicadores || []).map(p => `
-                        <div>
-                            <span>${p}</span>
-                            <span class="confirm-btns">
-                                <button class="verde" title="Confirmado">✔</button>
-                                <button class="amarelo" title="Talvez">?</button>
-                                <button class="vermelho" title="Não irá">✖</button>
-                            </span>
-                        </div>`).join('');
-
-                    row.innerHTML = `
-                        <td>${esc.ponto}</td>
-                        <td>${esc.equipamento}</td>
-                        <td><div class="status-container">${confirmacoes}</div></td>
-                        <td>${new Date(esc.inicio).toLocaleString('pt-BR')}</td>
-                        <td>${new Date(esc.fim).toLocaleString('pt-BR')}</td>
-                        <td><button class="btn btn-sm btn-danger" onclick="excluirEntrada('escalas','${child.key}');listarEscalas()">Excluir</button></td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            });
-        }
-
-        function excluirEntrada(caminho, id) {
-            if (confirm("Tem certeza que deseja excluir este item?")) {
-                db.ref(`${caminho}/${id}`).remove();
-            }
-        }
-
-        function atualizarEntrada(caminho, id, campo, valor, tbodyId) {
-            db.ref(`${caminho}/${id}`).update({ [campo]: valor }).then(() => {
-                listarTabela(caminho, campo, tbodyId);
-            });
-        }
-
-        function listarTabela(caminho, campo, tbodyId) {
-            const tbody = document.getElementById(tbodyId);
-            tbody.innerHTML = "";
-            db.ref(caminho).once('value').then(snapshot => {
-                snapshot.forEach(child => {
-                    const val = child.val();
-                    const nome = val[campo] || "Sem nome";
-                    const inputId = `${tbodyId}_${child.key}`;
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td><input id="${inputId}" type="text" value="${nome}"></td>
-                        <td>
-                            <button class="btn btn-sm btn-success" onclick="atualizarEntrada('${caminho}', '${child.key}', '${campo}', document.getElementById('${inputId}').value, '${tbodyId}')">Salvar</button>
-                            <button class="btn btn-sm btn-danger" onclick="excluirEntrada('${caminho}', '${child.key}');listarTabela('${caminho}', '${campo}', '${tbodyId}');initSelects()">Excluir</button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            });
-        }
-
-        function adicionarSimples(caminho, inputId) {
-            const input = document.getElementById(inputId);
-            const valor = input.value;
-            if (!valor) return;
-            const campo = caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador";
-            const dados = { [campo]: valor };
-            
-            db.ref(caminho).push(dados).then(() => {
-                input.value = "";
-                initSelects();
-                listarTabela(caminho, campo, `tabela-${caminho.toLowerCase()}`);
-            });
-        }
-
-        function initSelects() {
-            ["p1", "p2", "p3"].forEach(id => carregarOpcoes('Publicadores', id));
-            carregarOpcoes('Equipamentos', 'equipamento');
-            carregarOpcoes('Pontos', 'ponto');
-        }
-
-        window.onload = () => {
-            initSelects();
-            listarEscalas();
-            listarTabela('Publicadores', 'Publicador', 'tabela-publicadores');
-            listarTabela('Equipamentos', 'Equipamentos', 'tabela-equipamentos');
-            listarTabela('Pontos', 'Nome do ponto', 'tabela-pontos');
-        }
-    </script>
 </head>
 <body>
     <div class="container">
         <h1>Gerenciamento de Escalas 🗓️</h1>
 
         <div class="section">
-            <h2>Nova Escala</h2>
-            <label for="ponto">Ponto:</label>
-            <select id="ponto"></select>
-            
-            <label for="equipamento">Equipamento:</label>
-            <select id="equipamento"></select>
-            
-            <label for="p1">Publicador 1:</label>
-            <select id="p1"></select>
-            
-            <label for="p2">Publicador 2:</label>
-            <select id="p2"></select>
-            
-            <label for="p3">Publicador 3:</label>
-            <select id="p3"></select>
-            
-            <label for="inicio">Início:</label>
-            <input type="datetime-local" id="inicio">
-            
-            <label for="fim">Fim:</label>
-            <input type="datetime-local" id="fim">
-            
-            <button class="btn btn-primary" onclick="salvarEscala()">Salvar Escala</button>
+            <h2 id="form-title">Nova Escala</h2>
+            <form id="form-escala">
+                <label for="ponto">Ponto:</label> <select id="ponto"></select>
+                <label for="equipamento">Equipamento:</label> <select id="equipamento"></select>
+                <label for="p1">Publicador 1:</label> <select id="p1"></select>
+                <label for="p2">Publicador 2:</label> <select id="p2"></select>
+                <label for="p3">Publicador 3:</label> <select id="p3"></select>
+                <label for="inicio">Início:</label> <input type="datetime-local" id="inicio" step="900">
+                <label for="fim">Fim:</label> <input type="datetime-local" id="fim" step="900">
+                
+                <div class="form-actions">
+                    <button type="button" id="saveButton" class="btn btn-primary" onclick="salvarEscala()">Salvar Escala</button>
+                    <button type="button" id="cancelButton" class="btn btn-secondary" onclick="cancelarEdicao()" style="display: none;">Cancelar</button>
+                </div>
+            </form>
         </div>
 
         <div class="section">
@@ -409,44 +110,237 @@
 
         <div class="section">
             <h2>Escalas Cadastradas</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Ponto</th>
-                        <th>Equipamento</th>
-                        <th>Publicadores / Status</th>
-                        <th>Início</th>
-                        <th>Fim</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="lista-escalas"></tbody>
-            </table>
-        </div>
-
-        <div class="section">
-            <h2>Manutenção de Tabelas ⚙️</h2>
-            <div class="maintenance-grid">
-                <div class="maintenance-item">
-                    <h3>Publicadores</h3>
-                    <input id="novoPublicador" type="text" placeholder="Adicionar novo publicador">
-                    <button class="btn btn-sm btn-success" onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button>
-                    <table><tbody id="tabela-publicadores"></tbody></table>
-                </div>
-                <div class="maintenance-item">
-                    <h3>Equipamentos</h3>
-                    <input id="novoEquipamento" type="text" placeholder="Adicionar novo equipamento">
-                    <button class="btn btn-sm btn-success" onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button>
-                    <table><tbody id="tabela-equipamentos"></tbody></table>
-                </div>
-                <div class="maintenance-item">
-                    <h3>Pontos</h3>
-                    <input id="novoPonto" type="text" placeholder="Adicionar novo ponto">
-                    <button class="btn btn-sm btn-success" onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button>
-                    <table><tbody id="tabela-pontos"></tbody></table>
-                </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ponto</th>
+                            <th>Equipamento</th>
+                            <th>Publicadores / Status</th>
+                            <th>Início</th>
+                            <th>Fim</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-escalas"></tbody>
+                </table>
             </div>
         </div>
+        
     </div>
+
+    <script>
+        // --- CONFIGURAÇÃO FIREBASE (sem alterações) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU", authDomain: "coletor-92990.firebaseapp.com",
+            databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com", projectId: "coletor-92990",
+            storageBucket: "coletor-92990.firebasestorage.app", messagingSenderId: "591970302569",
+            appId: "1:591970302569:web:edcf8e8c6f55729c9340f8", measurementId: "G-QJQNMDCHW5"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- VARIÁVEL GLOBAL PARA CONTROLE DE EDIÇÃO ---
+        let escalaEditId = null;
+
+        // --- FUNÇÕES PRINCIPAIS ---
+
+        function salvarEscala() {
+            const inicio = document.getElementById('inicio').value;
+            const fim = document.getElementById('fim').value;
+            if (!inicio || !fim) { alert("Os campos Início e Fim são obrigatórios."); return; }
+            if (fim <= inicio) { alert("O horário FIM deve ser maior que o horário INÍCIO."); return; }
+
+            // ✨ Converte nomes de publicadores em objetos com status padrão 'amarelo'
+            const publicadores = ["p1", "p2", "p3"]
+                .map(id => document.getElementById(id).value)
+                .filter(Boolean) // Remove campos vazios
+                .map(nome => ({ nome: nome, status: 'amarelo' })); // Cria o objeto
+            
+            if (publicadores.length === 0) { alert("Adicione pelo menos um publicador."); return; }
+
+            const dados = {
+                ponto: document.getElementById('ponto').value,
+                equipamento: document.getElementById('equipamento').value,
+                publicadores: publicadores,
+                inicio,
+                fim
+            };
+
+            // ✨ Lógica para CRIAR ou ATUALIZAR
+            if (escalaEditId) {
+                // ATUALIZAR escala existente
+                const updates = {};
+                // Ao editar, preserva os status existentes dos publicadores
+                db.ref('escalas/' + escalaEditId).once('value', (snapshot) => {
+                    const escalaAntiga = snapshot.val();
+                    const publicadoresAntigos = escalaAntiga.publicadores || [];
+                    
+                    const novosPublicadores = dados.publicadores.map(novoPub => {
+                        const pubAntigo = publicadoresAntigos.find(p => p.nome === novoPub.nome);
+                        return pubAntigo ? pubAntigo : novoPub; // Mantém status se publicador já existia
+                    });
+                    
+                    dados.publicadores = novosPublicadores;
+                    db.ref('escalas/' + escalaEditId).update(dados).then(() => {
+                        alert("Escala atualizada com sucesso!");
+                        cancelarEdicao(); // Limpa o formulário e reseta o estado
+                        listarEscalas();
+                    });
+                });
+            } else {
+                // CRIAR nova escala
+                db.ref('escalas').push(dados).then(() => {
+                    alert("Escala salva com sucesso!");
+                    cancelarEdicao();
+                    listarEscalas();
+                });
+            }
+        }
+
+        function listarEscalas() {
+            const filtroNome = (document.getElementById("filtro")?.value || "").toLowerCase();
+            const filtroPonto = (document.getElementById("filtroPonto")?.value || "").toLowerCase();
+            const filtroData = document.getElementById("filtroData")?.value || "";
+
+            const tbody = document.getElementById("lista-escalas");
+            tbody.innerHTML = "<tr><td colspan='6'>Carregando...</td></tr>";
+
+            db.ref('escalas').orderByChild('inicio').once('value').then(snapshot => {
+                tbody.innerHTML = "";
+                let count = 0;
+                const escalasArray = [];
+                snapshot.forEach(child => {
+                    escalasArray.push({ key: child.key, ...child.val() });
+                });
+
+                // Inverte para mostrar os mais recentes primeiro
+                escalasArray.reverse().forEach(esc => {
+                    // Aplicação dos filtros
+                    const nomeMatch = filtroNome ? (esc.publicadores || []).some(p => p.nome.toLowerCase().includes(filtroNome)) : true;
+                    const pontoMatch = filtroPonto ? (esc.ponto || "").toLowerCase().includes(filtroPonto) : true;
+                    // ✨ CORREÇÃO FILTRO DE DATA: Compara apenas a parte da data da string
+                    const dataMatch = filtroData ? (esc.inicio || '').startsWith(filtroData) : true;
+
+                    if (!nomeMatch || !pontoMatch || !dataMatch) return;
+                    count++;
+                    
+                    const row = document.createElement("tr");
+
+                    // ✨ Lógica para criar os botões de status com a classe 'active'
+                    const confirmacoes = (esc.publicadores || []).map(p => `
+                        <div>
+                            <span>${p.nome}</span>
+                            <span class="confirm-btns">
+                                <button class="verde ${p.status === 'verde' ? 'active' : ''}" title="Confirmado" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'verde')">✔</button>
+                                <button class="amarelo ${p.status === 'amarelo' ? 'active' : ''}" title="Talvez" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'amarelo')">?</button>
+                                <button class="vermelho ${p.status === 'vermelho' ? 'active' : ''}" title="Não irá" onclick="atualizarStatus('${esc.key}', '${p.nome}', 'vermelho')">✖</button>
+                            </span>
+                        </div>`).join('');
+
+                    row.innerHTML = `
+                        <td>${esc.ponto}</td>
+                        <td>${esc.equipamento}</td>
+                        <td><div class="status-container">${confirmacoes}</div></td>
+                        <td>${new Date(esc.inicio).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
+                        <td>${new Date(esc.fim).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})}</td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary" onclick="iniciarEdicao('${esc.key}')">Alterar</button>
+                            <button class="btn btn-sm btn-danger" onclick="excluirEntrada('escalas','${esc.key}')">Excluir</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                if(count === 0) {
+                     tbody.innerHTML = "<tr><td colspan='6'>Nenhuma escala encontrada.</td></tr>";
+                }
+            });
+        }
+        
+        // ✨ NOVA FUNÇÃO para atualizar o status de um publicador
+        function atualizarStatus(escalaId, publicadorNome, novoStatus) {
+            const ref = db.ref(`escalas/${escalaId}/publicadores`);
+            ref.once('value').then(snapshot => {
+                const publicadores = snapshot.val() || [];
+                const pubIndex = publicadores.findIndex(p => p.nome === publicadorNome);
+                if (pubIndex !== -1) {
+                    publicadores[pubIndex].status = novoStatus;
+                    ref.set(publicadores).then(() => listarEscalas());
+                }
+            });
+        }
+        
+        // ✨ NOVA FUNÇÃO para popular o formulário para edição
+        function iniciarEdicao(id) {
+            escalaEditId = id;
+            db.ref('escalas/' + id).once('value').then(snapshot => {
+                const esc = snapshot.val();
+                if (!esc) return;
+
+                document.getElementById('ponto').value = esc.ponto;
+                document.getElementById('equipamento').value = esc.equipamento;
+                document.getElementById('inicio').value = esc.inicio;
+                document.getElementById('fim').value = esc.fim;
+                
+                // Limpa selects de publicadores antes de preencher
+                ['p1', 'p2', 'p3'].forEach(pid => document.getElementById(pid).value = "");
+
+                (esc.publicadores || []).forEach((p, index) => {
+                    if (index < 3) {
+                        document.getElementById(`p${index + 1}`).value = p.nome;
+                    }
+                });
+
+                document.getElementById('form-title').textContent = "Alterar Escala";
+                document.getElementById('saveButton').textContent = "Atualizar Escala";
+                document.getElementById('cancelButton').style.display = 'inline-block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+
+        // ✨ NOVA FUNÇÃO para cancelar a edição e limpar o formulário
+        function cancelarEdicao() {
+            escalaEditId = null;
+            document.getElementById('form-escala').reset();
+            document.getElementById('form-title').textContent = "Nova Escala";
+            document.getElementById('saveButton').textContent = "Salvar Escala";
+            document.getElementById('cancelButton').style.display = 'none';
+        }
+
+        function excluirEntrada(caminho, id) {
+            if (confirm("Tem certeza que deseja excluir esta escala?")) {
+                db.ref(`${caminho}/${id}`).remove().then(() => {
+                    listarEscalas();
+                });
+            }
+        }
+
+        function carregarOpcoes(caminho, selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            db.ref(caminho).once('value').then(snapshot => {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Selecione</option>';
+                snapshot.forEach(child => {
+                    const val = child.val();
+                    let texto = val.Publicador || "Sem nome";
+                    const option = document.createElement("option");
+                    option.value = texto;
+                    option.textContent = texto;
+                    select.appendChild(option);
+                });
+                select.value = currentValue; // Mantém valor selecionado, se houver
+            });
+        }
+
+        window.onload = () => {
+            // Carrega as opções dos selects uma vez
+            ["p1", "p2", "p3"].forEach(id => carregarOpcoes('Publicadores', id));
+            carregarOpcoes('Pontos', 'ponto');
+            carregarOpcoes('Equipamentos', 'equipamento');
+            // Lista as escalas
+            listarEscalas();
+        };
+    </script>
 </body>
 </html>
