@@ -1,235 +1,452 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Gerenciamento de Escala</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    label { display: block; margin-top: 10px; }
-    select, input, button { margin-bottom: 10px; width: 300px; }
-    .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 30px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-    .inline { display: inline-block; margin-right: 10px; vertical-align: top; }
-    .edit-input { width: 200px; }
-    .btn-sm { font-size: 12px; padding: 4px 8px; }
-    .confirm-btns button { margin-right: 4px; width: 30px; height: 30px; border: none; border-radius: 50%; }
-    .verde { background: #4CAF50; }
-    .amarelo { background: #FFEB3B; }
-    .vermelho { background: #F44336; }
-  </style>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
-      authDomain: "coletor-92990.firebaseapp.com",
-      databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com",
-      projectId: "coletor-92990",
-      storageBucket: "coletor-92990.firebasestorage.app",
-      messagingSenderId: "591970302569",
-      appId: "1:591970302569:web:edcf8e8c6f55729c9340f8",
-      measurementId: "G-QJQNMDCHW5"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Escala</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-    function carregarOpcoes(caminho, selectId) {
-      db.ref(caminho).once('value').then(snapshot => {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-        select.innerHTML = '<option value="">Selecione</option>';
-        snapshot.forEach(child => {
-          const val = child.val();
-          let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || val.nome || "Sem nome";
-          const option = document.createElement("option");
-          option.value = texto;
-          option.textContent = texto;
-          select.appendChild(option);
-        });
-      });
-    }
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        /* CSS Variables for Easy Theming */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --text-color: #333;
+            --border-color: #dee2e6;
+            --shadow: 0 4px 8px rgba(0,0,0,0.1);
+            --border-radius: 8px;
+        }
 
-    function salvarEscala() {
-      const inicio = document.getElementById('inicio').value;
-      const fim = document.getElementById('fim').value;
-      if (fim <= inicio) {
-        alert("O horário FIM deve ser maior que o horário INÍCIO.");
-        return;
-      }
-      const dados = {
-        ponto: document.getElementById('ponto').value,
-        equipamento: document.getElementById('equipamento').value,
-        publicadores: ["p1", "p2", "p3"].map(id => document.getElementById(id).value).filter(Boolean),
-        inicio,
-        fim
-      };
-      db.ref('escalas').push(dados).then(() => {
-        listarEscalas();
-        alert("Escala salva com sucesso!");
-      });
-    }
+        /* General Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    function listarEscalas() {
-      const filtroNome = document.getElementById("filtro")?.value?.toLowerCase() || "";
-      const filtroPonto = document.getElementById("filtroPonto")?.value?.toLowerCase() || "";
-      const filtroData = document.getElementById("filtroData")?.value || "";
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #f4f7f9;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
 
-      const tbody = document.getElementById("lista-escalas");
-      tbody.innerHTML = "";
-      db.ref('escalas').once('value').then(snapshot => {
-        snapshot.forEach(child => {
-          const esc = child.val();
-          if (filtroNome && !esc.publicadores?.some(p => p.toLowerCase().includes(filtroNome))) return;
-          if (filtroPonto && !(esc.ponto || "").toLowerCase().includes(filtroPonto)) return;
-          if (filtroData && !(new Date(esc.inicio || '').toISOString().slice(0,10) === filtroData)) return;
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
 
-          const row = document.createElement("tr");
-          const confirmacoes = (esc.publicadores || []).map(p => `
-            <div>
-              ${p} <span class="confirm-btns">
-                <button class="verde" title="Confirmado"></button>
-                <button class="amarelo" title="Talvez"></button>
-                <button class="vermelho" title="Não irá"></button>
-              </span>
-            </div>`).join('');
+        h1, h2, h3 {
+            margin-bottom: 1rem;
+            color: var(--dark-color);
+            font-weight: 500;
+        }
 
-          row.innerHTML = `
-            <td>${esc.ponto}</td>
-            <td>${esc.equipamento}</td>
-            <td>${confirmacoes}</td>
-            <td>${esc.inicio}</td>
-            <td>${esc.fim}</td>
-            <td><button class="btn-sm" onclick="excluirEntrada('escalas','${child.key}');listarEscalas()">Excluir</button></td>
-          `;
-          tbody.appendChild(row);
-        });
-      });
-    }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 700;
+        }
 
-    function excluirEntrada(caminho, id) {
-      db.ref(`${caminho}/${id}`).remove();
-    }
+        /* Card/Section Styling */
+        .section {
+            background: #fff;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
 
-    function atualizarEntrada(caminho, id, campo, valor) {
-      db.ref(`${caminho}/${id}`).update({ [campo]: valor });
-    }
+        /* Form Elements */
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
 
-    function listarTabela(caminho, campo, tbodyId) {
-      const tbody = document.getElementById(tbodyId);
-      tbody.innerHTML = "";
-      db.ref(caminho).once('value').then(snapshot => {
-        snapshot.forEach(child => {
-          const val = child.val();
-          const nome = val[campo] || "Sem nome";
-          const inputId = `${tbodyId}_${child.key}`;
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td><input id="${inputId}" class="edit-input" value="${nome}"></td>
-            <td>
-              <button class="btn-sm" onclick="atualizarEntrada('${caminho}', '${child.key}', '${campo}', document.getElementById('${inputId}').value);listarTabela('${caminho}', '${campo}', '${tbodyId}')">Salvar</button>
-              <button class="btn-sm" onclick="excluirEntrada('${caminho}', '${child.key}');listarTabela('${caminho}', '${campo}', '${tbodyId}');initSelects()">Excluir</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      });
-    }
+        select, input[type="text"], input[type="date"], input[type="datetime-local"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
 
-    function adicionarSimples(caminho, inputId) {
-      const valor = document.getElementById(inputId).value;
-      if (!valor) return;
-      const dados = {};
-      dados[caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador"] = valor;
-      db.ref(caminho).push(dados).then(() => {
-        document.getElementById(inputId).value = "";
-        initSelects();
-        listarTabela(caminho, caminho === 'Pontos' ? 'Nome do ponto' : caminho === 'Equipamentos' ? 'Equipamentos' : 'Publicador', `tabela-${caminho.toLowerCase()}`);
-      });
-    }
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
 
-    function initSelects() {
-      ["p1", "p2", "p3"].forEach(id => carregarOpcoes('Publicadores', id));
-      carregarOpcoes('Equipamentos', 'equipamento');
-      carregarOpcoes('Pontos', 'ponto');
-    }
+        /* Button Styles */
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: center;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            color: #fff;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
 
-    window.onload = () => {
-      initSelects();
-      listarEscalas();
-      listarTabela('Publicadores', 'Publicador', 'tabela-publicadores');
-      listarTabela('Equipamentos', 'Equipamentos', 'tabela-equipamentos');
-      listarTabela('Pontos', 'Nome do ponto', 'tabela-pontos');
-    }
-  </script>
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-success { background-color: var(--success-color); }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-secondary { background-color: var(--secondary-color); }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+
+        /* Layout Specifics */
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        
+        .filter-container input {
+            flex: 1;
+        }
+
+        .filter-container .btn {
+            margin-bottom: 15px; /* Aligns with other inputs */
+            height: 48px;
+        }
+        
+        .maintenance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        thead {
+            background-color: var(--light-color);
+        }
+        
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        td .btn { margin-right: 5px; }
+
+        /* Confirmation Status Buttons */
+        .confirm-btns {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .confirm-btns button {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+            line-height: 30px;
+            text-align: center;
+        }
+        
+        .status-container > div {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .verde { background: var(--success-color); }
+        .amarelo { background: var(--warning-color); }
+        .vermelho { background: var(--danger-color); }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-container .btn {
+                width: 100%;
+                margin-bottom: 0;
+            }
+        }
+
+    </style>
+    <script>
+        // SEU CÓDIGO JAVASCRIPT ORIGINAL (com uma pequena alteração)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
+            authDomain: "coletor-92990.firebaseapp.com",
+            databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com",
+            projectId: "coletor-92990",
+            storageBucket: "coletor-92990.firebasestorage.app",
+            messagingSenderId: "591970302569",
+            appId: "1:591970302569:web:edcf8e8c6f55729c9340f8",
+            measurementId: "G-QJQNMDCHW5"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function carregarOpcoes(caminho, selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            db.ref(caminho).once('value').then(snapshot => {
+                select.innerHTML = '<option value="">Selecione</option>';
+                snapshot.forEach(child => {
+                    const val = child.val();
+                    let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || val.nome || "Sem nome";
+                    const option = document.createElement("option");
+                    option.value = texto;
+                    option.textContent = texto;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function salvarEscala() {
+            const inicio = document.getElementById('inicio').value;
+            const fim = document.getElementById('fim').value;
+            if (fim <= inicio) {
+                alert("O horário FIM deve ser maior que o horário INÍCIO.");
+                return;
+            }
+            const dados = {
+                ponto: document.getElementById('ponto').value,
+                equipamento: document.getElementById('equipamento').value,
+                publicadores: ["p1", "p2", "p3"].map(id => document.getElementById(id).value).filter(Boolean),
+                inicio,
+                fim
+            };
+            db.ref('escalas').push(dados).then(() => {
+                listarEscalas();
+                alert("Escala salva com sucesso!");
+            });
+        }
+
+        function listarEscalas() {
+            const filtroNome = (document.getElementById("filtro")?.value || "").toLowerCase();
+            const filtroPonto = (document.getElementById("filtroPonto")?.value || "").toLowerCase();
+            const filtroData = document.getElementById("filtroData")?.value || "";
+
+            const tbody = document.getElementById("lista-escalas");
+            tbody.innerHTML = "";
+            db.ref('escalas').once('value').then(snapshot => {
+                snapshot.forEach(child => {
+                    const esc = child.val();
+                    if (filtroNome && !esc.publicadores?.some(p => p.toLowerCase().includes(filtroNome))) return;
+                    if (filtroPonto && !(esc.ponto || "").toLowerCase().includes(filtroPonto)) return;
+                    if (filtroData && !(new Date(esc.inicio || '').toISOString().slice(0, 10) === filtroData)) return;
+
+                    const row = document.createElement("tr");
+                    
+                    // ✨ ALTERAÇÃO: Adicionado ícones e nova estrutura para os botões de confirmação
+                    const confirmacoes = (esc.publicadores || []).map(p => `
+                        <div>
+                            <span>${p}</span>
+                            <span class="confirm-btns">
+                                <button class="verde" title="Confirmado">✔</button>
+                                <button class="amarelo" title="Talvez">?</button>
+                                <button class="vermelho" title="Não irá">✖</button>
+                            </span>
+                        </div>`).join('');
+
+                    row.innerHTML = `
+                        <td>${esc.ponto}</td>
+                        <td>${esc.equipamento}</td>
+                        <td><div class="status-container">${confirmacoes}</div></td>
+                        <td>${new Date(esc.inicio).toLocaleString('pt-BR')}</td>
+                        <td>${new Date(esc.fim).toLocaleString('pt-BR')}</td>
+                        <td><button class="btn btn-sm btn-danger" onclick="excluirEntrada('escalas','${child.key}');listarEscalas()">Excluir</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            });
+        }
+
+        function excluirEntrada(caminho, id) {
+            if (confirm("Tem certeza que deseja excluir este item?")) {
+                db.ref(`${caminho}/${id}`).remove();
+            }
+        }
+
+        function atualizarEntrada(caminho, id, campo, valor, tbodyId) {
+            db.ref(`${caminho}/${id}`).update({ [campo]: valor }).then(() => {
+                listarTabela(caminho, campo, tbodyId);
+            });
+        }
+
+        function listarTabela(caminho, campo, tbodyId) {
+            const tbody = document.getElementById(tbodyId);
+            tbody.innerHTML = "";
+            db.ref(caminho).once('value').then(snapshot => {
+                snapshot.forEach(child => {
+                    const val = child.val();
+                    const nome = val[campo] || "Sem nome";
+                    const inputId = `${tbodyId}_${child.key}`;
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><input id="${inputId}" type="text" value="${nome}"></td>
+                        <td>
+                            <button class="btn btn-sm btn-success" onclick="atualizarEntrada('${caminho}', '${child.key}', '${campo}', document.getElementById('${inputId}').value, '${tbodyId}')">Salvar</button>
+                            <button class="btn btn-sm btn-danger" onclick="excluirEntrada('${caminho}', '${child.key}');listarTabela('${caminho}', '${campo}', '${tbodyId}');initSelects()">Excluir</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function adicionarSimples(caminho, inputId) {
+            const input = document.getElementById(inputId);
+            const valor = input.value;
+            if (!valor) return;
+            const campo = caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador";
+            const dados = { [campo]: valor };
+            
+            db.ref(caminho).push(dados).then(() => {
+                input.value = "";
+                initSelects();
+                listarTabela(caminho, campo, `tabela-${caminho.toLowerCase()}`);
+            });
+        }
+
+        function initSelects() {
+            ["p1", "p2", "p3"].forEach(id => carregarOpcoes('Publicadores', id));
+            carregarOpcoes('Equipamentos', 'equipamento');
+            carregarOpcoes('Pontos', 'ponto');
+        }
+
+        window.onload = () => {
+            initSelects();
+            listarEscalas();
+            listarTabela('Publicadores', 'Publicador', 'tabela-publicadores');
+            listarTabela('Equipamentos', 'Equipamentos', 'tabela-equipamentos');
+            listarTabela('Pontos', 'Nome do ponto', 'tabela-pontos');
+        }
+    </script>
 </head>
 <body>
-  <h1>Gerenciamento de Escalas</h1>
+    <div class="container">
+        <h1>Gerenciamento de Escalas 🗓️</h1>
 
-  <div class="section">
-    <h2>Nova Escala</h2>
-    <label>Ponto:</label>
-    <select id="ponto"></select>
-    <label>Equipamento:</label>
-    <select id="equipamento"></select>
-    <label>Publicador 1:</label>
-    <select id="p1"></select>
-    <label>Publicador 2:</label>
-    <select id="p2"></select>
-    <label>Publicador 3:</label>
-    <select id="p3"></select>
-    <label>Início:</label>
-    <input type="datetime-local" id="inicio">
-    <label>Fim:</label>
-    <input type="datetime-local" id="fim"><br>
-    <button onclick="salvarEscala()">Salvar Escala</button>
-  </div>
+        <div class="section">
+            <h2>Nova Escala</h2>
+            <label for="ponto">Ponto:</label>
+            <select id="ponto"></select>
+            
+            <label for="equipamento">Equipamento:</label>
+            <select id="equipamento"></select>
+            
+            <label for="p1">Publicador 1:</label>
+            <select id="p1"></select>
+            
+            <label for="p2">Publicador 2:</label>
+            <select id="p2"></select>
+            
+            <label for="p3">Publicador 3:</label>
+            <select id="p3"></select>
+            
+            <label for="inicio">Início:</label>
+            <input type="datetime-local" id="inicio">
+            
+            <label for="fim">Fim:</label>
+            <input type="datetime-local" id="fim">
+            
+            <button class="btn btn-primary" onclick="salvarEscala()">Salvar Escala</button>
+        </div>
 
-  <div class="section">
-    <h2>Filtrar Escalas</h2>
-    <input id="filtro" placeholder="Nome do publicador">
-    <input id="filtroPonto" placeholder="Nome do ponto">
-    <input id="filtroData" type="date" placeholder="Data">
-    <button onclick="listarEscalas()">Filtrar</button>
-  </div>
+        <div class="section">
+            <h2>Filtrar Escalas 🔎</h2>
+            <div class="filter-container">
+                <input id="filtro" type="text" placeholder="Nome do publicador">
+                <input id="filtroPonto" type="text" placeholder="Nome do ponto">
+                <input id="filtroData" type="date">
+                <button class="btn btn-secondary" onclick="listarEscalas()">Filtrar</button>
+            </div>
+        </div>
 
-  <div class="section">
-    <h2>Escalas Cadastradas</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Ponto</th>
-          <th>Equipamento</th>
-          <th>Publicadores</th>
-          <th>Início</th>
-          <th>Fim</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="lista-escalas"></tbody>
-    </table>
-  </div>
+        <div class="section">
+            <h2>Escalas Cadastradas</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ponto</th>
+                        <th>Equipamento</th>
+                        <th>Publicadores / Status</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-escalas"></tbody>
+            </table>
+        </div>
 
-  <div class="section">
-    <h2>Manutenção de Tabelas</h2>
-    <div class="inline">
-      <h3>Publicadores</h3>
-      <input id="novoPublicador">
-      <button class="btn-sm" onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button>
-      <table><tbody id="tabela-publicadores"></tbody></table>
+        <div class="section">
+            <h2>Manutenção de Tabelas ⚙️</h2>
+            <div class="maintenance-grid">
+                <div class="maintenance-item">
+                    <h3>Publicadores</h3>
+                    <input id="novoPublicador" type="text" placeholder="Adicionar novo publicador">
+                    <button class="btn btn-sm btn-success" onclick="adicionarSimples('Publicadores', 'novoPublicador')">Adicionar</button>
+                    <table><tbody id="tabela-publicadores"></tbody></table>
+                </div>
+                <div class="maintenance-item">
+                    <h3>Equipamentos</h3>
+                    <input id="novoEquipamento" type="text" placeholder="Adicionar novo equipamento">
+                    <button class="btn btn-sm btn-success" onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button>
+                    <table><tbody id="tabela-equipamentos"></tbody></table>
+                </div>
+                <div class="maintenance-item">
+                    <h3>Pontos</h3>
+                    <input id="novoPonto" type="text" placeholder="Adicionar novo ponto">
+                    <button class="btn btn-sm btn-success" onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button>
+                    <table><tbody id="tabela-pontos"></tbody></table>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="inline">
-      <h3>Equipamentos</h3>
-      <input id="novoEquipamento">
-      <button class="btn-sm" onclick="adicionarSimples('Equipamentos', 'novoEquipamento')">Adicionar</button>
-      <table><tbody id="tabela-equipamentos"></tbody></table>
-    </div>
-    <div class="inline">
-      <h3>Pontos</h3>
-      <input id="novoPonto">
-      <button class="btn-sm" onclick="adicionarSimples('Pontos', 'novoPonto')">Adicionar</button>
-      <table><tbody id="tabela-pontos"></tbody></table>
-    </div>
-  </div>
 </body>
 </html>
