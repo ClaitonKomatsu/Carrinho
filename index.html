@@ -1,467 +1,565 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciamento de Escala</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    
-    <style>
-        :root {
-            --primary-color: #007bff; --secondary-color: #6c757d; --success-color: #28a745;
-            --warning-color: #ffc107; --danger-color: #dc3545; --light-color: #f8f9fa;
-            --dark-color: #343a40; --text-color: #333; --border-color: #dee2e6;
-            --shadow: 0 4px 8px rgba(0,0,0,0.1); --border-radius: 8px;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Roboto', sans-serif; background-color: #f4f7f9; color: var(--text-color); line-height: 1.6; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
-        h1, h2, h3 { margin-bottom: 1rem; color: var(--dark-color); font-weight: 500; }
-        h1 { text-align: center; margin-bottom: 2rem; font-weight: 700; }
-        .section { background: #fff; padding: 25px; margin-bottom: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); }
-        label { display: block; margin-bottom: 5px; font-weight: 500; }
-        input[type="text"], input[type="date"], select {
-            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color);
-            border-radius: var(--border-radius); font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        select:focus, input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); }
-        .btn { display: inline-block; padding: 12px 20px; font-size: 1rem; font-weight: 500; text-align: center;
-            border-radius: var(--border-radius); border: none; cursor: pointer; transition: all 0.2s; color: #fff;
-        }
-        .btn:hover { opacity: 0.9; }
-        .btn:active { transform: translateY(1px); }
-        .btn-primary { background-color: var(--primary-color); }
-        .btn-success { background-color: var(--success-color); }
-        .btn-danger { background-color: var(--danger-color); }
-        .btn-secondary { background-color: var(--secondary-color); }
-        .btn-sm { padding: 2px 6px; font-size: 0.75rem; line-height: 1.4; margin: 0 2px; }
-        .filter-container { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
-        .filter-container div { flex: 1; min-width: 200px; }
-        .filter-container .btn { margin-bottom: 15px; height: 50px; }
-        .maintenance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
-        .maintenance-item input[type="text"] { width: calc(100% - 100px); display: inline-block; margin-right: 10px; }
-        .maintenance-item > .btn-sm { width: 85px; vertical-align: top; padding: 12px 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid var(--border-color); padding: 4px 8px; text-align: left; vertical-align: middle; }
-        thead { background-color: var(--light-color); }
-        tbody tr:nth-child(even) { background-color: #f9f9f9; }
-        .maintenance-item table { table-layout: fixed; }
-        .maintenance-item table td:first-child { width: 75%; }
-        .maintenance-item .action-cell { width: 25%; text-align: center; }
-        .maintenance-item .action-cell .btn { display: block; width: 100%; margin-bottom: 3px; padding: 2px 4px; }
-        .maintenance-item .action-cell .btn:last-child { margin-bottom: 0; }
-        .th-acoes, .escalas-action-cell { width: 8% !important; text-align: center; }
-        .escalas-action-cell .btn { font-size: 1rem; padding: 2px 5px; }
-        .confirm-btns { display: flex; gap: 5px; align-items: center; }
-        .confirm-btns button {
-            width: 22px; height: 22px; border: none; border-radius: 50%; cursor: pointer; color: white;
-            font-size: 12px; line-height: 22px; text-align: center; opacity: 0.25; 
-            transition: opacity 0.2s, transform 0.2s;
-        }
-        .confirm-btns button.active { opacity: 1; transform: scale(1.1); }
-        .status-container > div { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
-        .verde { background: var(--success-color); }
-        .amarelo { background: var(--warning-color); }
-        .vermelho { background: var(--danger-color); }
-        .form-actions { display: flex; gap: 10px; }
-        
-        .time-picker-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;}
-        .time-group { display: flex; gap: 10px; }
-        .time-group select { flex-grow: 1; }
-        
-        @media (max-width: 768px) { .filter-container .btn { width: 100%; margin-bottom: 0; } }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Testemunho Público</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    :root {
+      --cor-primaria: #2980b9; --cor-secundaria: #3498db; --cor-fundo: #f4f7f9;
+      --cor-container: #ffffff; --cor-texto: #34495e; --cor-borda: #bdc3c7;
+      --cor-sucesso: #27ae60; --cor-erro: #c0392b;
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background-color: var(--cor-fundo); color: var(--cor-texto); margin: 0; padding: 20px; }
+    .container { max-width: 1400px; margin: auto; }
+    .section { background-color: var(--cor-container); padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 25px; }
+    h1, h2 { color: var(--cor-primaria); border-bottom: 2px solid var(--cor-secundaria); padding-bottom: 10px; margin-top: 0; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    select, input { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--cor-borda); box-sizing: border-box; margin-bottom: 15px; }
+    button { background-color: var(--cor-primaria); color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; }
+    button:hover { background-color: #2c3e50; }
+    .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+    .grid-form-consulta {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px 20px;
+      align-items: end;
+    }
+    .input-small {
+      width: 50%;
+    }
+    .input-small-date {
+      width: 60%;
+    }
+    .publisher-stack { display: flex; flex-direction: column; gap: 0; }
+    .publisher-stack > div { margin-bottom: -15px; }
+    .weekday-selector { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+    .weekday-selector div { display: flex; align-items: center; gap: 5px; }
+    .weekday-selector input[type="checkbox"] { width: auto; margin-bottom: 0; }
+    .maintenance-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }
+    .table-container { max-height: 300px; overflow-y: auto; border: 1px solid var(--cor-borda); border-radius: 5px; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; }
+    th { background-color: var(--cor-texto); color: white; position: sticky; top: 0; z-index: 10; }
+    tr:nth-child(even) { background-color: var(--cor-fundo); }
+    .btn-sm { padding: 6px 12px; font-size: 14px; margin-left: 5px; }
+    .btn-alterar { background-color: var(--cor-secundaria); }
+    .btn-excluir { background-color: var(--cor-erro); }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: var(--cor-fundo); margin: 10% auto; padding: 30px; border-radius: 8px; width: 80%; max-width: 800px; }
+    .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Gerenciamento de Escalas 🗓️</h1>
+  <div class="container">
+    <h1>TESTEMUNHO PÚBLICO</h1>
 
-        <div class="section">
-            <h2 id="form-title">Nova Escala</h2>
-            <form id="form-escala">
-                <div class="time-picker-grid">
-                    <div><label for="ponto">Ponto:</label> <select id="ponto"></select></div>
-                    <div><label for="equipamento">Equipamento:</label> <select id="equipamento"></select></div>
-                </div>
-                <div class="time-picker-grid">
-                    <div><label for="p1">Publicador 1:</label> <select id="p1"></select></div>
-                    <div><label for="p2">Publicador 2:</label> <select id="p2"></select></div>
-                    <div><label for="p3">Publicador 3:</label> <select id="p3"></select></div>
-                </div>
-                
-                <div class="time-picker-grid">
-                    <div>
-                        <label for="escala-data">Data:</label>
-                        <input type="date" id="escala-data">
-                    </div>
-                    <div>
-                        <label for="inicio-hora">Horário de Início:</label>
-                        <div class="time-group">
-                            <select id="inicio-hora" onchange="atualizarOpcoesFim()"></select>
-                            <select id="inicio-minuto" onchange="atualizarOpcoesFim()">
-                                <option value="00">00</option> <option value="15">15</option>
-                                <option value="30">30</option> <option value="45">45</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="fim-hora">Horário de Fim:</label>
-                        <div class="time-group">
-                            <select id="fim-hora"></select>
-                            <select id="fim-minuto">
-                                <option value="00">00</option> <option value="15">15</option>
-                                <option value="30">30</option> <option value="45">45</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <br>
-                <div class="form-actions">
-                    <button type="button" id="saveButton" class="btn btn-primary" onclick="salvarEscala()">Salvar Escala</button>
-                    <button type="button" id="cancelButton" class="btn btn-secondary" onclick="cancelarEdicao()" style="display: none;">Cancelar</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="section">
-            <h2>Filtrar Escalas 🔎</h2>
-            <div class="filter-container">
-                <div><label>Publicador:</label><input id="filtro" type="text" placeholder="Nome do publicador"></div>
-                <div><label>Ponto:</label><input id="filtroPonto" type="text" placeholder="Nome do ponto"></div>
-                <div><label>Data:</label><input id="filtroData" type="date"></div>
-                <button class="btn btn-secondary" onclick="listarEscalas()">Filtrar</button>
+    <div class="section">
+      <h2>Incluir Nova Escala</h2>
+      <form id="form-escala" onsubmit="event.preventDefault(); salvarEscalaRecorrente();">
+        <div class="grid-form">
+            <div>
+                <label>Ponto:</label><select id="ponto" required></select>
+                <label>Equipamento:</label><select id="equipamento" required></select>
+            </div>
+            <div class="publisher-stack">
+                <div><label>Publicador 1:</label><select id="p1" required></select></div>
+                <div><label>Publicador 2:</label><select id="p2" required></select></div>
+                <div><label>Publicador 3 (Opcional):</label><select id="p3"></select></div>
             </div>
         </div>
-
-        <div class="section">
-            <h2>Escalas Cadastradas</h2>
-            <div style="overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Ponto</th><th>Equipamento</th><th>Publicadores / Status</th><th>Início</th><th>Fim</th>
-                            <th class="th-acoes">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="lista-escalas"></tbody>
-                </table>
-            </div>
+        <hr style="margin: 20px 0;">
+        <label>Selecione os Dias da Semana:</label>
+        <div class="weekday-selector">
+            <div><input type="checkbox" id="dia-0" value="0"><label for="dia-0">Dom</label></div>
+            <div><input type="checkbox" id="dia-1" value="1"><label for="dia-1">Seg</label></div>
+            <div><input type="checkbox" id="dia-2" value="2"><label for="dia-2">Ter</label></div>
+            <div><input type="checkbox" id="dia-3" value="3"><label for="dia-3">Qua</label></div>
+            <div><input type="checkbox" id="dia-4" value="4"><label for="dia-4">Qui</label></div>
+            <div><input type="checkbox" id="dia-5" value="5"><label for="dia-5">Sex</label></div>
+            <div><input type="checkbox" id="dia-6" value="6"><label for="dia-6">Sáb</label></div>
         </div>
-        
+        <div class="grid-form">
+            <div><label>Horário Inicial:</label><input type="time" id="horario-inicio" class="input-small" required></div>
+            <div><label>Horário Final:</label><input type="time" id="horario-fim" class="input-small" required></div>
+            <div><label>Data Inicial do Período:</label><input type="date" id="data-inicio" class="input-small" required></div>
+            <div><label>Data Final do Período:</label><input type="date" id="data-fim" class="input-small" required></div>
+        </div>
+        <button type="submit">Salvar Escala(s)</button>
+      </form>
     </div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU", authDomain: "coletor-92990.firebaseapp.com",
-            databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com", projectId: "coletor-92990",
-            storageBucket: "coletor-92990.firebasestorage.app", messagingSenderId: "591970302569",
-            appId: "1:591970302569:web:edcf8e8c6f55729c9340f8", measurementId: "G-QJQNMDCHW5"
+    <div class="section">
+      <h2>Consulta Programação</h2>
+      <div class="grid-form-consulta">
+        <div>
+          <label>Publicador:</label>
+          <select id="filtroPublicador"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label>Ponto:</label>
+          <select id="filtroPonto"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label>Equipamento:</label>
+          <select id="filtroEquipamento"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label>Data Inicial:</label>
+          <input type="date" id="filtroDataInicial" class="input-small-date">
+        </div>
+        <div style="grid-column: 1 / 4;">
+          <label>Filtrar por Dias da Semana:</label>
+          <div class="weekday-selector" id="filtro-dias-semana-container">
+            <div><input type="checkbox" id="filtro-dia-0" value="0"><label for="filtro-dia-0">Dom</label></div>
+            <div><input type="checkbox" id="filtro-dia-1" value="1"><label for="filtro-dia-1">Seg</label></div>
+            <div><input type="checkbox" id="filtro-dia-2" value="2"><label for="filtro-dia-2">Ter</label></div>
+            <div><input type="checkbox" id="filtro-dia-3" value="3"><label for="filtro-dia-3">Qua</label></div>
+            <div><input type="checkbox" id="filtro-dia-4" value="4"><label for="filtro-dia-4">Qui</label></div>
+            <div><input type="checkbox" id="filtro-dia-5" value="5"><label for="filtro-dia-5">Sex</label></div>
+            <div><input type="checkbox" id="filtro-dia-6" value="6"><label for="filtro-dia-6">Sáb</label></div>
+          </div>
+        </div>
+        <div>
+          <label>Data Final:</label>
+          <input type="date" id="filtroDataFinal" class="input-small-date">
+        </div>
+      </div>
+      <button onclick="listarEscalas()" style="margin-top: 15px;">Aplicar Filtros</button>
+      
+      <div class="table-container" style="max-height: 70vh; margin-top: 20px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th><th>Dia</th><th>Horário</th><th>Ponto</th><th>Equipamento</th><th>Publicadores</th><th style="text-align:right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="lista-escalas"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Cadastros</h2>
+      <div class="maintenance-container">
+        <div>
+          <h3>Publicadores</h3>
+          <input id="novoPublicador" placeholder="Nome do novo publicador">
+          <button onclick="adicionarItem('Publicadores', 'novoPublicador', 'Publicador')">Adicionar</button>
+          <div class="table-container"><table id="tabela-publicadores"></table></div>
+        </div>
+        <div>
+          <h3>Equipamentos</h3>
+          <input id="novoEquipamento" placeholder="Nome do novo equipamento">
+          <button onclick="adicionarItem('Equipamentos', 'novoEquipamento', 'Equipamentos')">Adicionar</button>
+          <div class="table-container"><table id="tabela-equipamentos"></table></div>
+        </div>
+        <div>
+          <h3>Pontos</h3>
+          <input id="novoPonto" placeholder="Nome do novo ponto">
+          <button onclick="adicionarItem('Pontos', 'novoPonto', 'Nome do ponto')">Adicionar</button>
+          <div class="table-container"><table id="tabela-pontos"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close-button" onclick="document.getElementById('editModal').style.display='none'">&times;</span>
+      <h2>Alterar Escala</h2>
+      <form id="form-edit-escala" onsubmit="event.preventDefault(); salvarAlteracoesEscala();">
+        <input type="hidden" id="editEscalaKey">
+        <div class="grid-form">
+          <div><label for="editPonto">Ponto:</label><select id="editPonto" required></select></div>
+          <div><label for="editEquipamento">Equipamento:</label><select id="editEquipamento" required></select></div>
+          <div><label>Início:</label><input type="datetime-local" id="editInicio" required></div>
+          <div><label>Fim:</label><input type="datetime-local" id="editFim" required></div>
+        </div>
+        <div class="publisher-stack">
+          <div><label for="editP1">Publicador 1:</label><select id="editP1" required></select></div>
+          <div><label for="editP2">Publicador 2:</label><select id="editP2" required></select></div>
+          <div><label for="editP3">Publicador 3 (Opcional):</label><select id="editP3"></select></div>
+        </div>
+        <button type="submit" style="margin-top:20px;">Salvar Alterações</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // --- CONFIGURAÇÃO DO FIREBASE ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwK935g0qeR4Lhbn_eTgXwkbongPp4QYU",
+      authDomain: "coletor-92990.firebaseapp.com",
+      databaseURL: "https://coletor-92990-default-rtdb.firebaseio.com",
+      projectId: "coletor-92990",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- FUNÇÕES GERAIS E DE CADASTROS ---
+
+    function carregarOpcoesSelects() {
+      const campos = [
+        {caminho: 'Publicadores', ids: ['p1', 'p2', 'p3', 'editP1', 'editP2', 'editP3', 'filtroPublicador'], campoNome: 'Publicador'},
+        {caminho: 'Equipamentos', ids: ['equipamento', 'editEquipamento', 'filtroEquipamento'], campoNome: 'Equipamentos'},
+        {caminho: 'Pontos', ids: ['ponto', 'editPonto', 'filtroPonto'], campoNome: 'Nome do ponto'},
+      ];
+      campos.forEach(({caminho, ids, campoNome}) => {
+          db.ref(caminho).once('value', snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+            const itemsArray = Object.values(data).sort((a,b) => (a[campoNome] || '').localeCompare(b[campoNome] || ''));
+            let options = [`<option value="">-- Selecione --</option>`];
+            itemsArray.forEach(item => {
+                const texto = item[campoNome];
+                if(texto) options.push(`<option value="${texto}">${texto}</option>`);
+            });
+            let filterOptions = [`<option value="">Todos</option>`].concat(options.slice(1));
+            ids.forEach(id => {
+                const select = document.getElementById(id);
+                if(select) {
+                    select.innerHTML = id.includes('filtro') ? filterOptions.join('') : options.join('');
+                }
+            });
+          });
+      });
+    }
+
+    function carregarDadosManutencao() {
+        const tabelas = [
+            { caminho: 'Publicadores', campo: 'Publicador', tableId: 'tabela-publicadores' },
+            { caminho: 'Equipamentos', campo: 'Equipamentos', tableId: 'tabela-equipamentos' },
+            { caminho: 'Pontos', campo: 'Nome do ponto', tableId: 'tabela-pontos' }
+        ];
+        tabelas.forEach(({caminho, campo, tableId}) => {
+            db.ref(caminho).once('value', snapshot => {
+                const table = document.getElementById(tableId); 
+                table.innerHTML = "<thead><tr><th>Nome</th><th style='text-align:right;'>Ações</th></tr></thead><tbody></tbody>";
+                const tbody = table.querySelector('tbody');
+                
+                if (!snapshot.exists()) {
+                    tbody.innerHTML = `<tr><td colspan="2">Nenhum item cadastrado.</td></tr>`;
+                    return;
+                }
+                
+                let itemsArray = [];
+                snapshot.forEach(child => {
+                    itemsArray.push({ key: child.key, ...child.val() });
+                });
+                
+                itemsArray.sort((a, b) => (a[campo] || '').localeCompare(b[campo] || ''));
+
+                let rowsHtml = "";
+                itemsArray.forEach(item => {
+                    const nome = item[campo] || "S/N";
+                    rowsHtml += `<tr>
+                                    <td>${nome}</td>
+                                    <td style="text-align:right;">
+                                        <button class='btn-sm btn-alterar' onclick="alterarItemManutencao('${caminho}', '${item.key}', '${campo}')">Alterar</button>
+                                        <button class='btn-sm btn-excluir' onclick="excluirItemManutencao('${caminho}', '${item.key}')">Excluir</button>
+                                    </td>
+                                 </tr>`;
+                });
+                tbody.innerHTML = rowsHtml;
+            });
+        });
+    }
+
+    async function adicionarItem(caminho, inputId, campo) {
+      const input = document.getElementById(inputId);
+      const valor = input.value.trim();
+      if (!valor) return;
+
+      const snapshot = await db.ref(caminho).orderByChild(campo).equalTo(valor).once('value');
+      if (snapshot.exists()) {
+          alert(`O item "${valor}" já existe.`);
+          return;
+      }
+
+      db.ref(caminho).push({ [campo]: valor }).then(() => {
+        input.value = "";
+        carregarDadosManutencao();
+        carregarOpcoesSelects();
+      });
+    }
+
+    function alterarItemManutencao(caminho, id, campo) {
+        const itemRef = db.ref(`${caminho}/${id}`);
+        itemRef.once('value', async snapshot => {
+            const nomeAtual = snapshot.val()[campo];
+            const novoNome = prompt("Alterar o nome de:", nomeAtual);
+
+            if (novoNome && novoNome.trim() && novoNome.trim() !== nomeAtual) {
+                const valorNovo = novoNome.trim();
+                const snapDuplicado = await db.ref(caminho).orderByChild(campo).equalTo(valorNovo).once('value');
+                if (snapDuplicado.exists()) {
+                    alert(`O nome "${valorNovo}" já está em uso.`);
+                    return;
+                }
+                
+                itemRef.update({ [campo]: valorNovo }).then(() => {
+                    carregarDadosManutencao();
+                    carregarOpcoesSelects();
+                });
+            }
+        });
+    }
+
+    function excluirItemManutencao(caminho, id) {
+      if (!confirm('Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.')) return;
+      db.ref(`${caminho}/${id}`).remove().then(() => {
+        carregarDadosManutencao();
+        carregarOpcoesSelects();
+      });
+    }
+
+    // --- FUNÇÕES DE CADASTRO DE ESCALA ---
+
+    async function salvarEscalaRecorrente() {
+        const dadosBase = {
+            ponto: document.getElementById('ponto').value,
+            equipamento: document.getElementById('equipamento').value,
+            publicadores: ["p1", "p2", "p3"].map(id => document.getElementById(id).value).filter(Boolean),
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        let escalaEditId = null;
+        const horarioInicio = document.getElementById('horario-inicio').value;
+        const horarioFim = document.getElementById('horario-fim').value;
+        const diasSemanaSelecionados = Array.from(document.querySelectorAll('.weekday-selector:not(#filtro-dias-semana-container) input:checked')).map(cb => parseInt(cb.value));
+        if (diasSemanaSelecionados.length === 0 || !horarioInicio || !horarioFim || !dadosBase.ponto || !dadosBase.equipamento || dadosBase.publicadores.length < 2) {
+            alert("Verifique os campos. É necessário selecionar o ponto, equipamento, pelo menos 2 publicadores, os dias da semana e os horários."); return;
+        }
+        const dataInicio = new Date(document.getElementById('data-inicio').value + 'T00:00:00');
+        const dataFim = new Date(document.getElementById('data-fim').value + 'T00:00:00');
+        let todasEscalasParaCriar = [];
+        for (let dia = new Date(dataInicio); dia <= dataFim; dia.setDate(dia.getDate() + 1)) {
+            if (diasSemanaSelecionados.includes(dia.getDay())) {
+                todasEscalasParaCriar.push({
+                    ...dadosBase,
+                    inicio: `${dia.toISOString().slice(0, 10)}T${horarioInicio}`,
+                    fim: `${dia.toISOString().slice(0, 10)}T${horarioFim}`,
+                });
+            }
+        }
+        if(todasEscalasParaCriar.length === 0){ alert("Nenhum dia da semana correspondente foi encontrado no período."); return; }
+        
+        document.body.style.cursor = 'wait';
+        
+        const snapshot = await db.ref('escalas').once('value');
+        const escalasExistentes = Object.values(snapshot.val() || {});
+        
+        const checarConflito = (novaEscala) => {
+            const newStart = new Date(novaEscala.inicio).getTime();
+            const newEnd = new Date(novaEscala.fim).getTime();
+            for (const esc of escalasExistentes) {
+                const escStart = new Date(esc.inicio).getTime();
+                const escEnd = new Date(esc.fim).getTime();
+                if (newStart < escEnd && newEnd > escStart) { // Checa sobreposição de horários
+                    if (esc.equipamento === novaEscala.equipamento) return `Equipamento "${esc.equipamento}" já em uso no horário.`;
+                    if (esc.ponto === novaEscala.ponto) return `Ponto "${esc.ponto}" já ocupado no horário.`;
+                    for (const p of novaEscala.publicadores) {
+                        if ((esc.publicadores || []).includes(p)) return `Publicador "${p}" já escalado em outro local no mesmo horário.`;
+                    }
+                }
+            }
+            return null;
+        };
 
-        // Lógica de salvar adaptada para o novo formulário
-        async function salvarEscala() {
-            const data = document.getElementById('escala-data').value;
-            const inicioHora = document.getElementById('inicio-hora').value;
-            const inicioMinuto = document.getElementById('inicio-minuto').value;
-            const fimHora = document.getElementById('fim-hora').value;
-            const fimMinuto = document.getElementById('fim-minuto').value;
-
-            if (!data) { alert("O campo Data é obrigatório."); return; }
-            
-            // ✨ 2. Validação final de horário
-            if (parseInt(fimHora) < parseInt(inicioHora) || (fimHora === inicioHora && parseInt(fimMinuto) <= parseInt(inicioMinuto))) {
-                alert("O horário FIM deve ser maior que o horário INÍCIO.");
+        for (const escala of todasEscalasParaCriar) {
+            const conflito = checarConflito(escala);
+            if (conflito) {
+                alert(`CONFLITO EM ${new Date(escala.inicio).toLocaleDateString()}:\n${conflito}\n\nA operação foi cancelada.`);
+                document.body.style.cursor = 'default';
                 return;
             }
+        }
 
-            const inicioStr = `${data}T${inicioHora}:${inicioMinuto}`;
-            const fimStr = `${data}T${fimHora}:${fimMinuto}`;
+        const promessasPush = todasEscalasParaCriar.map(escala => db.ref('escalas').push(escala));
+        await Promise.all(promessasPush);
+        
+        document.body.style.cursor = 'default';
+        alert(`${todasEscalasParaCriar.length} escala(s) foram criadas com sucesso!`);
+        document.getElementById("form-escala").reset();
+        listarEscalas(); // Atualiza a tabela de visualização
+    }
 
-            const dadosForm = {
-                ponto: document.getElementById('ponto').value,
-                equipamento: document.getElementById('equipamento').value,
-                publicadores: ["p1", "p2", "p3"].map(id => document.getElementById(id).value).filter(Boolean),
-                inicio: new Date(inicioStr),
-                fim: new Date(fimStr)
-            };
-            if (dadosForm.publicadores.length === 0) { alert("Adicione pelo menos um publicador."); return; }
+    // --- FUNÇÕES DE CONSULTA E GERENCIAMENTO DE ESCALAS ---
 
-            const todasEscalasSnapshot = await db.ref('escalas').once('value');
-            let conflitoEncontrado = false;
-            todasEscalasSnapshot.forEach(child => {
-                if (conflitoEncontrado || (escalaEditId && child.key === escalaEditId)) return;
-                const escalaExistente = child.val();
-                const inicioExistente = new Date(escalaExistente.inicio);
-                const fimExistente = new Date(escalaExistente.fim);
-                const haSobreposicao = dadosForm.inicio < fimExistente && dadosForm.fim > inicioExistente;
-                if (haSobreposicao) {
-                    if (escalaExistente.ponto === dadosForm.ponto) {
-                        alert(`CONFLITO: O ponto '${dadosForm.ponto}' já está em uso neste horário.`);
-                        conflitoEncontrado = true;
-                    }
-                    if (escalaExistente.equipamento === dadosForm.equipamento) {
-                        alert(`CONFLITO: O equipamento '${dadosForm.equipamento}' já está em uso neste horário.`);
-                        conflitoEncontrado = true;
-                    }
-                    dadosForm.publicadores.forEach(pub => {
-                        if ((escalaExistente.publicadores || []).some(p => p.nome === pub)) {
-                            alert(`CONFLITO: O publicador '${pub}' já está escalado neste horário.`);
-                            conflitoEncontrado = true;
-                        }
-                    });
-                }
-            });
+    function listarEscalas() {
+      const tbody = document.getElementById("lista-escalas");
+      tbody.innerHTML = "<tr><td colspan='7'>Carregando...</td></tr>";
+      
+      const filtros = {
+        publicador: document.getElementById('filtroPublicador').value,
+        ponto: document.getElementById('filtroPonto').value,
+        equipamento: document.getElementById('filtroEquipamento').value,
+        dataInicial: document.getElementById('filtroDataInicial').value,
+        dataFinal: document.getElementById('filtroDataFinal').value,
+      };
+      const diasSemanaFiltro = Array.from(document.querySelectorAll('#filtro-dias-semana-container input:checked')).map(cb => parseInt(cb.value));
 
-            if (conflitoEncontrado) return;
+      db.ref('escalas').orderByChild('inicio').once('value', snapshot => {
+        if (!snapshot.exists()) {
+            tbody.innerHTML = "<tr><td colspan='7'>Nenhuma escala cadastrada.</td></tr>";
+            return;
+        }
 
-            const publicadoresParaSalvar = dadosForm.publicadores.map(nome => ({ nome, status: 'amarelo' }));
-            const dadosParaSalvar = {
-                ponto: dadosForm.ponto,
-                equipamento: dadosForm.equipamento,
-                publicadores: publicadoresParaSalvar,
-                inicio: inicioStr,
-                fim: fimStr
-            };
+        let escalasArray = [];
+        snapshot.forEach(child => {
+            escalasArray.push({ key: child.key, ...child.val() });
+        });
+        
+        const diasDaSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        let rowsHtml = "";
+
+        escalasArray.forEach(esc => {
+            const dataEscala = new Date(esc.inicio);
+            if (filtros.publicador && !(esc.publicadores || []).includes(filtros.publicador)) return;
+            if (filtros.ponto && esc.ponto !== filtros.ponto) return;
+            if (filtros.equipamento && esc.equipamento !== filtros.equipamento) return;
+            if (filtros.dataInicial && dataEscala < new Date(filtros.dataInicial + 'T00:00:00')) return;
+            if (filtros.dataFinal && dataEscala > new Date(filtros.dataFinal + 'T23:59:59')) return;
+            if (diasSemanaFiltro.length > 0 && !diasSemanaFiltro.includes(dataEscala.getDay())) return;
             
-            const promise = escalaEditId ? 
-                db.ref('escalas/' + escalaEditId).update(dadosParaSalvar) : 
-                db.ref('escalas').push(dadosParaSalvar);
+            const pontoHtml = (filtros.ponto && filtros.ponto === esc.ponto) ? `<b>${esc.ponto}</b>` : esc.ponto;
+            const equipamentoHtml = (filtros.equipamento && filtros.equipamento === esc.equipamento) ? `<b>${esc.equipamento}</b>` : esc.equipamento;
+            const publicadores = esc.publicadores || [];
+            const publicadoresHtml = publicadores.map(p => (filtros.publicador && p === filtros.publicador) ? `<b>${p}</b>` : p).join(', ');
 
-            promise.then(() => {
-                alert(escalaEditId ? "Escala atualizada com sucesso!" : "Escala salva com sucesso!");
-                cancelarEdicao();
+            rowsHtml += `<tr>
+                            <td>${dataEscala.toLocaleDateString('pt-BR')}</td>
+                            <td>${diasDaSemana[dataEscala.getDay()]}</td>
+                            <td>${dataEscala.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(esc.fim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td>${pontoHtml || 'N/A'}</td>
+                            <td>${equipamentoHtml || 'N/A'}</td>
+                            <td>${publicadoresHtml}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-sm btn-alterar" onclick="abrirModalEdicao('${esc.key}')">Alterar</button>
+                                <button class="btn-sm btn-excluir" onclick="excluirItemEscala('${esc.key}')">Excluir</button>
+                            </td>
+                        </tr>`;
+        });
+        tbody.innerHTML = rowsHtml || "<tr><td colspan='7'>Nenhuma escala encontrada para os filtros aplicados.</td></tr>";
+      });
+    }
+    
+    async function setupFiltros() {
+        const hoje = new Date();
+        const hojeFormatado = hoje.toISOString().slice(0, 10);
+        document.getElementById('filtroDataInicial').value = hojeFormatado;
+
+        // Carrega a maior data final das escalas existentes
+        const snapshot = await db.ref('escalas').orderByChild('inicio').limitToLast(1).once('value');
+        if (snapshot.exists()) {
+            let maxDate = '';
+            snapshot.forEach(child => {
+                maxDate = child.val().inicio.slice(0, 10);
             });
-        }
-        
-        function listarEscalas() {
-            // (Esta função foi refatorada na versão anterior e permanece robusta)
-            // ... (código existente)
-        }
-        
-        // Lógica de edição adaptada para o novo formulário
-        function iniciarEdicao(id) {
-            escalaEditId = id;
-            db.ref('escalas/' + id).once('value').then(snapshot => {
-                const esc = snapshot.val();
-                if (!esc) return;
-                
-                const inicioDate = new Date(esc.inicio);
-                const fimDate = new Date(esc.fim);
-
-                document.getElementById('escala-data').value = inicioDate.toISOString().split('T')[0];
-                document.getElementById('inicio-hora').value = inicioDate.getHours().toString().padStart(2, '0');
-                document.getElementById('inicio-minuto').value = inicioDate.getMinutes().toString().padStart(2, '0');
-                
-                document.getElementById('fim-hora').value = fimDate.getHours().toString().padStart(2, '0');
-                document.getElementById('fim-minuto').value = fimDate.getMinutes().toString().padStart(2, '0');
-                
-                atualizarOpcoesFim(); // Garante que as opções de Fim fiquem corretas
-                
-                document.getElementById('ponto').value = esc.ponto;
-                document.getElementById('equipamento').value = esc.equipamento;
-                ['p1', 'p2', 'p3'].forEach(pid => document.getElementById(pid).value = "");
-                (esc.publicadores || []).forEach((p, i) => { if (i < 3) document.getElementById(`p${i + 1}`).value = p.nome; });
-                
-                document.getElementById('form-title').textContent = "Alterar Escala";
-                document.getElementById('saveButton').textContent = "Atualizar Escala";
-                document.getElementById('cancelButton').style.display = 'inline-block';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
+            document.getElementById('filtroDataFinal').value = maxDate;
+        } else {
+            // Se não houver escalas, define para um ano a partir de hoje como padrão
+            const umAnoDepois = new Date();
+            umAnoDepois.setFullYear(hoje.getFullYear() + 1);
+            document.getElementById('filtroDataFinal').value = umAnoDepois.toISOString().slice(0, 10);
         }
 
-        function cancelarEdicao() {
-            escalaEditId = null;
-            document.getElementById('form-escala').reset();
-            document.getElementById('form-title').textContent = "Nova Escala";
-            document.getElementById('saveButton').textContent = "Salvar Escala";
-            document.getElementById('cancelButton').style.display = 'none';
+        listarEscalas();
+    }
+
+    function excluirItemEscala(id) {
+        if (!confirm('Tem certeza que deseja excluir esta escala?')) return;
+        db.ref(`escalas/${id}`).remove().then(listarEscalas);
+    }
+    
+    function abrirModalEdicao(key) {
+      db.ref(`escalas/${key}`).once('value', snapshot => {
+        const esc = snapshot.val();
+        document.getElementById('editEscalaKey').value = key;
+        document.getElementById('editPonto').value = esc.ponto;
+        document.getElementById('editEquipamento').value = esc.equipamento;
+        document.getElementById('editInicio').value = esc.inicio;
+        document.getElementById('editFim').value = esc.fim;
+        ['editP1', 'editP2', 'editP3'].forEach((id, index) => {
+            document.getElementById(id).value = (esc.publicadores || [])[index] || "";
+        });
+        document.getElementById('editModal').style.display = 'block';
+      });
+    }
+
+    async function salvarAlteracoesEscala() {
+      const key = document.getElementById('editEscalaKey').value;
+      const dadosAtualizados = {
+        ponto: document.getElementById('editPonto').value,
+        equipamento: document.getElementById('editEquipamento').value,
+        inicio: document.getElementById('editInicio').value,
+        fim: document.getElementById('editFim').value,
+        publicadores: ["editP1", "editP2", "editP3"].map(id => document.getElementById(id).value).filter(Boolean),
+      };
+      if (dadosAtualizados.publicadores.length < 2) {
+        alert("A escala deve ter pelo menos 2 publicadores.");
+        return;
+      }
+
+      const snapshot = await db.ref('escalas').once('value');
+      const checarConflito = (novaEscala, chaveIgnorada) => {
+          const newStart = new Date(novaEscala.inicio).getTime();
+          const newEnd = new Date(novaEscala.fim).getTime();
+          for (const [key, esc] of Object.entries(snapshot.val() || {})) {
+              if (key === chaveIgnorada) continue;
+              const escStart = new Date(esc.inicio).getTime();
+              const escEnd = new Date(esc.fim).getTime();
+              if (newStart < escEnd && newEnd > escStart) {
+                  if (esc.equipamento === novaEscala.equipamento) return `Equipamento "${esc.equipamento}" já em uso no horário.`;
+                  if (esc.ponto === novaEscala.ponto) return `Ponto "${esc.ponto}" já ocupado no horário.`;
+                  for (const p of novaEscala.publicadores) {
+                      if ((esc.publicadores || []).includes(p)) return `Publicador "${p}" já escalado em outro local no mesmo horário.`;
+                  }
+              }
+          }
+          return null;
+      };
+      
+      const conflito = checarConflito(dadosAtualizados, key);
+      if (conflito) { 
+          alert(`CONFLITO: ${conflito}\n\nA alteração não foi salva.`); 
+          return; 
+      }
+
+      db.ref(`escalas/${key}`).update(dadosAtualizados).then(() => {
+        alert("Escala atualizada com sucesso!");
+        document.getElementById('editModal').style.display = 'none';
+        listarEscalas();
+      });
+    }
+    
+    function setupEventListeners() {
+        document.getElementById('horario-inicio').addEventListener('change', function() {
+            const startTime = this.value;
+            if (!startTime) {
+                document.getElementById('horario-fim').value = '';
+                return;
+            }
             
-            document.getElementById('filtro').value = '';
-            document.getElementById('filtroPonto').value = '';
-            document.getElementById('filtroData').value = '';
-            listarEscalas();
-        }
+            const [hours, minutes] = startTime.split(':');
+            const date = new Date();
+            date.setHours(parseInt(hours, 10) + 2);
+            date.setMinutes(parseInt(minutes, 10));
 
-        // ✨ 2. Nova função para validar e auto-ajustar o horário Fim
-        function atualizarOpcoesFim() {
-            const inicioHoraSelect = document.getElementById('inicio-hora');
-            const fimHoraSelect = document.getElementById('fim-hora');
-            const inicioMinutoSelect = document.getElementById('inicio-minuto');
-            const fimMinutoSelect = document.getElementById('fim-minuto');
+            const finalHours = date.getHours().toString().padStart(2, '0');
+            const finalMinutes = date.getMinutes().toString().padStart(2, '0');
             
-            const inicioHora = parseInt(inicioHoraSelect.value);
-            const inicioMinuto = parseInt(inicioMinutoSelect.value);
+            document.getElementById('horario-fim').value = `${finalHours}:${finalMinutes}`;
+        });
+    }
 
-            // Habilita todas as opções antes de desabilitar as necessárias
-            for (const option of fimHoraSelect.options) option.disabled = false;
-            for (const option of fimMinutoSelect.options) option.disabled = false;
-
-            // Desabilita horas no Fim que são anteriores ao Início
-            for (let i = 0; i < inicioHora; i++) {
-                fimHoraSelect.options[i].disabled = true;
-            }
-
-            // Se a hora do Fim for a mesma do Início, desabilita minutos
-            if (parseInt(fimHoraSelect.value) === inicioHora) {
-                for (const option of fimMinutoSelect.options) {
-                    if (parseInt(option.value) <= inicioMinuto) {
-                        option.disabled = true;
-                    }
-                }
-            }
-
-            // Se o horário de Fim se tornou inválido, avança para o próximo válido
-            if (parseInt(fimHoraSelect.value) < inicioHora || 
-               (parseInt(fimHoraSelect.value) === inicioHora && parseInt(fimMinutoSelect.value) <= inicioMinuto)) {
-                
-                let novaHora = inicioHora;
-                let novoMinuto = inicioMinuto + 15;
-
-                if (novoMinuto >= 60) {
-                    novoMinuto = 0;
-                    novaHora += 1;
-                }
-
-                if (novaHora < 24) {
-                    fimHoraSelect.value = novaHora.toString().padStart(2, '0');
-                    fimMinutoSelect.value = novoMinuto.toString().padStart(2, '0');
-                } else {
-                    // Se passar da última hora, mantém no último horário válido
-                    fimHoraSelect.value = "23";
-                    fimMinutoSelect.value = "45";
-                }
-            }
-        }
-        
-        // Função para popular os seletores de hora (00-23)
-        function popularHoras() {
-            const selects = [document.getElementById('inicio-hora'), document.getElementById('fim-hora')];
-            selects.forEach(select => {
-                for (let i = 0; i < 24; i++) {
-                    const hora = i.toString().padStart(2, '0');
-                    select.add(new Option(hora, hora));
-                }
-            });
-        }
-        
-        window.onload = () => {
-            popularHoras();
-            initSelects();
-            listarEscalas();
-            listarTabela('Publicadores', 'Publicador', 'tabela-publicadores');
-            listarTabela('Equipamentos', 'Equipamentos', 'tabela-equipamentos');
-            listarTabela('Pontos', 'Nome do ponto', 'tabela-pontos');
-        };
-
-        // As demais funções de apoio (listarTabela, adicionarSimples, etc.) não necessitam de alterações e foram omitidas para brevidade, mas devem ser mantidas no seu script.
-        // O código completo da seção <script> está disponível abaixo caso precise copiar e colar tudo.
-    </script>
-    <script>
-        // CÓDIGO JAVASCRIPT COMPLETO (para garantir que nada seja perdido)
-        // (Cole todo o código JavaScript desta caixa no seu arquivo)
-        
-        // Funções omitidas na visualização anterior para brevidade
-        function listarTabela(caminho, campo, tbodyId) {
-            const tbody = document.getElementById(tbodyId);
-            tbody.innerHTML = "";
-            db.ref(caminho).once('value').then(snapshot => {
-                const items = [];
-                snapshot.forEach(child => {
-                    items.push({ key: child.key, text: child.val()[campo] || "Sem nome" });
-                });
-
-                items.sort((a, b) => a.text.localeCompare(b.text, 'pt-BR'));
-
-                items.forEach(item => {
-                    const row = tbody.insertRow();
-                    const inputCell = row.insertCell();
-                    const actionCell = row.insertCell();
-                    actionCell.className = 'maintenance-item action-cell';
-
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.id = `${tbodyId}_${item.key}`;
-                    input.value = item.text;
-                    input.style.fontSize = '0.9rem';
-                    input.style.padding = '4px';
-                    inputCell.appendChild(input);
-
-                    const btnSalvar = document.createElement('button');
-                    btnSalvar.className = 'btn btn-sm btn-success';
-                    btnSalvar.textContent = 'Salvar';
-                    btnSalvar.addEventListener('click', () => {
-                        const novoValor = { [campo]: document.getElementById(input.id).value };
-                        atualizarEntrada(caminho, item.key, novoValor, () => listarTabela(caminho, campo, tbodyId));
-                    });
-                    actionCell.appendChild(btnSalvar);
-
-                    const btnExcluir = document.createElement('button');
-                    btnExcluir.className = 'btn btn-sm btn-danger';
-                    btnExcluir.textContent = 'Excluir';
-                    btnExcluir.addEventListener('click', () => {
-                        excluirEntrada(caminho, item.key, () => {
-                            listarTabela(caminho, campo, tbodyId);
-                            initSelects();
-                        });
-                    });
-                    actionCell.appendChild(btnExcluir);
-                });
-            });
-        }
-        function adicionarSimples(caminho, inputId) {
-            const input = document.getElementById(inputId);
-            const valor = input.value;
-            if (!valor) return;
-            const campo = caminho === 'Pontos' ? "Nome do ponto" : caminho === 'Equipamentos' ? "Equipamentos" : "Publicador";
-            const dados = { [campo]: valor };
-            db.ref(caminho).push(dados).then(() => {
-                input.value = "";
-                listarTabela(caminho, campo, `tabela-${caminho.toLowerCase()}`);
-                initSelects();
-            });
-        }
-        function atualizarEntrada(caminho, id, dados, callback) {
-            db.ref(`${caminho}/${id}`).update(dados).then(callback);
-        }
-        function excluirEntrada(caminho, id, callback) {
-            if (confirm("Tem certeza que deseja excluir este item?")) {
-                db.ref(`${caminho}/${id}`).remove().then(() => {
-                    if (callback) callback();
-                });
-            }
-        }
-        function carregarOpcoes(caminho, selectId) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            db.ref(caminho).once('value').then(snapshot => {
-                const currentValue = select.value;
-                select.innerHTML = '<option value="">Selecione</option>';
-                const options = [];
-                snapshot.forEach(child => {
-                    const val = child.val();
-                    let texto = val["Nome do ponto"] || val.Publicador || val.Equipamentos || "Sem nome";
-                    options.push(texto);
-                });
-                options.sort((a,b) => a.localeCompare(b, 'pt-BR'));
-                options.forEach(texto => select.add(new Option(texto, texto)));
-                select.value = currentValue;
-            });
-        }
-        function initSelects() {
-            ["p1", "p2", "p3"].forEach(id => carregarOpcoes('Publicadores', id));
-            carregarOpcoes('Pontos', 'ponto');
-            carregarOpcoes('Equipamentos', 'equipamento');
-        }
-    </script>
+    // --- INICIALIZAÇÃO DA PÁGINA ---
+    window.onload = () => {
+      carregarOpcoesSelects();
+      carregarDadosManutencao();
+      setupFiltros();
+      setupEventListeners();
+    };
+  </script>
 </body>
 </html>
